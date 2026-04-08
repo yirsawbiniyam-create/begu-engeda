@@ -70,7 +70,13 @@ export const AuthPage: React.FC = () => {
         });
       }
     } catch (err: any) {
-      setError(err.message);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Login window was closed. Please try again and keep the window open. / የሎጊን መስኮቱ ተዘግቷል። እባክዎ እንደገና ይሞክሩ።');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized. Please add it to Firebase Console. / ይህ ድረ-ገጽ በፋየርቤዝ አልተፈቀደም። እባክዎ በፋየርቤዝ ኮንሶል ላይ ይፍቀዱት።');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -97,7 +103,15 @@ export const AuthPage: React.FC = () => {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
-      setError(err.message);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError('Email/Password login is not enabled in Firebase Console. / የኢሜል ሎጊን በፋየርቤዝ ኮንሶል ላይ አልተፈቀደም።');
+      } else if (err.code === 'auth/user-not-found') {
+        setError('User not found. Please register first. / ተጠቃሚው አልተገኘም። እባክዎ መጀመሪያ ይመዝገቡ።');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Incorrect password. / የተሳሳተ የይለፍ ቃል ገብቷል።');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
