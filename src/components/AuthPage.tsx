@@ -26,7 +26,8 @@ type AuthMode = 'login' | 'register' | 'role-select';
 type UserRole = 'receptionist' | 'zone_police' | 'city_police' | 'regional_police';
 
 export const AuthPage: React.FC = () => {
-  const [mode, setMode] = useState<AuthMode>('role-select');
+  const { user, profile } = useAuth();
+  const [mode, setMode] = useState<AuthMode>(user && !profile ? 'register' : 'role-select');
   const [role, setRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,16 +90,37 @@ export const AuthPage: React.FC = () => {
 
     try {
       if (mode === 'register') {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', result.user.uid), {
-          uid: result.user.uid,
-          email,
-          fullName,
-          phoneNumber: phone,
-          role: role,
-          createdAt: new Date().toISOString(),
-          ...(role === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
-        });
+        let currentUser = auth.currentUser;
+        
+        if (!currentUser) {
+          try {
+            const result = await createUserWithEmailAndPassword(auth, email, password);
+            currentUser = result.user;
+          } catch (createErr: any) {
+            if (createErr.code === 'auth/email-already-in-use') {
+              const loginResult = await signInWithEmailAndPassword(auth, email, password);
+              currentUser = loginResult.user;
+            } else {
+              throw createErr;
+            }
+          }
+        }
+
+        if (currentUser) {
+          const finalRole = (currentUser.email === 'policeregion551@gmail.com' || currentUser.email === 'yirsawbiniyam@gmail.com') 
+            ? 'regional_police' 
+            : role;
+
+          await setDoc(doc(db, 'users', currentUser.uid), {
+            uid: currentUser.uid,
+            email: currentUser.email,
+            fullName,
+            phoneNumber: phone,
+            role: finalRole,
+            createdAt: new Date().toISOString(),
+            ...(finalRole === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
+          });
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -196,6 +218,17 @@ export const AuthPage: React.FC = () => {
                     {role?.replace('_', ' ')}
                   </span>
                 </div>
+
+                {user && !profile && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+                    <p className="text-sm text-amber-800 font-bold">
+                      Account exists but profile is missing. Please register below to complete setup.
+                    </p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      አካውንት አለዎት ነገር ግን ፕሮፋይል አልተሞላም። እባክዎ ምዝገባውን ያጠናቅቁ።
+                    </p>
+                  </div>
+                )}
 
                 {error && (
                   <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">

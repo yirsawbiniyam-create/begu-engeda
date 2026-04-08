@@ -356,6 +356,150 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 
+  const renderReports = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-2xl font-bold text-slate-800">Reports / ሪፖርቶች</h3>
+        {profile?.role === 'receptionist' && (
+          <button 
+            onClick={() => setShowReportModal(true)}
+            className="flex items-center px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition font-bold shadow-lg shadow-amber-100"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            New Guest Registration / አዲስ እንግዳ መመዝገቢያ
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                <th className="px-6 py-4 font-bold">Guest / እንግዳ</th>
+                <th className="px-6 py-4 font-bold">Hotel / ሆቴል</th>
+                <th className="px-6 py-4 font-bold">Date / ቀን</th>
+                <th className="px-6 py-4 font-bold">Status / ሁኔታ</th>
+                <th className="px-6 py-4 font-bold">Action / ተግባር</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {reports.map((report) => (
+                <tr key={report.id} className="hover:bg-slate-50 transition">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-white",
+                        report.isWantedMatch ? "bg-red-500" : "bg-slate-200 text-slate-600"
+                      )}>
+                        {report.guestName[0]}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800">{report.guestName}</p>
+                        <p className="text-xs text-slate-500">{report.phoneNumber}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
+                    <p className="text-xs text-slate-400">{report.hotelAddress?.city}, {report.hotelAddress?.zone}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center text-xs text-slate-500">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      {format(new Date(report.createdAt), 'MMM dd, yyyy')}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {report.isWantedMatch ? (
+                      <span className="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded-full uppercase animate-pulse">
+                        Wanted / ተፈላጊ
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">
+                        Clear / ሰላም
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <button 
+                      onClick={() => {
+                        setSelectedReport(report);
+                        if (profile.role !== 'receptionist') markAsRead(report.id);
+                      }}
+                      className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {reports.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No reports found / ምንም ሪፖርት አልተገኘም</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="max-w-2xl space-y-6">
+      <h3 className="text-2xl font-bold text-slate-800">Account Settings / መቼት</h3>
+      
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-8">
+        <div className="flex items-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mr-6">
+            <UserIcon className="w-10 h-10 text-amber-600" />
+          </div>
+          <div>
+            <h4 className="text-xl font-bold text-slate-900">{profile?.fullName}</h4>
+            <p className="text-slate-500">{profile?.email}</p>
+            <span className="inline-block mt-2 px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-full uppercase">
+              {profile?.role?.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-50">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Full Name</label>
+            <p className="font-medium text-slate-800">{profile?.fullName}</p>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
+            <p className="font-medium text-slate-800">{profile?.phoneNumber || 'Not provided'}</p>
+          </div>
+          {profile?.role === 'receptionist' ? (
+            <>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Hotel Name</label>
+                <p className="font-medium text-slate-800">{profile?.hotelName}</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address</label>
+                <p className="font-medium text-slate-800">{profile?.hotelAddress?.city}, {profile?.hotelAddress?.zone}</p>
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Jurisdiction</label>
+              <p className="font-medium text-slate-800">
+                {profile?.policeJurisdiction?.city || profile?.policeJurisdiction?.zone || 'Regional'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const [showWantedModal, setShowWantedModal] = useState(false);
   const [wantedFormData, setWantedFormData] = useState({
     fullName: '',
@@ -488,14 +632,8 @@ export const Dashboard: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'wanted' && renderWanted()}
-          
-          {/* Placeholder for other tabs */}
-          {activeTab !== 'overview' && activeTab !== 'wanted' && (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400">
-              <FileText className="w-16 h-16 mb-4 opacity-20" />
-              <p className="text-lg font-medium">Coming Soon / በቅርቡ ይጠብቁ</p>
-            </div>
-          )}
+          {activeTab === 'reports' && renderReports()}
+          {activeTab === 'settings' && renderSettings()}
         </div>
       </main>
 
