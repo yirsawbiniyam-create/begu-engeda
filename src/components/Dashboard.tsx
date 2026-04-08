@@ -39,6 +39,7 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import imageCompression from 'browser-image-compression';
 import { auth, db, storage } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 import { cn, handleFirestoreError, OperationType } from '../lib/utils';
@@ -104,28 +105,32 @@ export const Dashboard: React.FC = () => {
     if (profile.role === 'receptionist') {
       reportsQuery = query(
         collection(db, 'reports'),
-        where('receptionistUid', '==', user?.uid),
-        orderBy('createdAt', 'desc')
+        where('receptionistUid', '==', user?.uid)
       );
     } else if (profile.role === 'regional_police') {
-      reportsQuery = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
+      reportsQuery = query(collection(db, 'reports'));
     } else {
       // Zone/City Police - filter by jurisdiction
       const jurisdictionKey = profile.role === 'zone_police' ? 'hotelAddress.zone' : 'hotelAddress.city';
       reportsQuery = query(
         collection(db, 'reports'),
-        where(jurisdictionKey, '==', profile.policeJurisdiction[profile.role === 'zone_police' ? 'zone' : 'city']),
-        orderBy('createdAt', 'desc')
+        where(jurisdictionKey, '==', profile.policeJurisdiction[profile.role === 'zone_police' ? 'zone' : 'city'])
       );
     }
 
     const unsubReports = onSnapshot(reportsQuery, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setReports(data);
+      
+      // Sort client-side to avoid composite index requirement
+      const sortedData = data.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      setReports(sortedData);
       
       // Real-time notifications for police
       if (profile.role !== 'receptionist') {
-        const unread = data.filter((r: any) => !r.isReadByPolice);
+        const unread = sortedData.filter((r: any) => !r.isReadByPolice);
         setNotifications(unread);
       }
     }, (error) => {
@@ -150,14 +155,26 @@ export const Dashboard: React.FC = () => {
 
     try {
       setIsUploading(true);
-      const storageRef = ref(storage, `id_cards/${user.uid}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      setFormData(prev => ({ ...prev, idCardUrl: downloadURL }));
+      
+      // Compress image heavily to fit in Firestore (target < 300KB)
+      const options = {
+        maxSizeMB: 0.3,
+        maxWidthOrHeight: 800,
+        useWebWorker: true
+      };
+      const compressedFile = await imageCompression(file, options);
+
+      // Convert to Base64 string
+      const reader = new FileReader();
+      reader.readAsDataURL(compressedFile);
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        setFormData(prev => ({ ...prev, idCardUrl: base64data }));
+        setIsUploading(false);
+      };
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Failed to upload image. Please try again.");
-    } finally {
+      alert("Failed to process image. Please try again.");
       setIsUploading(false);
     }
   };
@@ -233,20 +250,20 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+        <div className="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h3 className="text-lg font-bold text-slate-800">Recent Activity / የቅርብ ጊዜ እንቅስቃሴዎች</h3>
           {profile?.role === 'receptionist' && (
             <button 
               onClick={() => setShowReportModal(true)}
-              className="flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold"
+              className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold"
             >
               <Plus className="w-4 h-4 mr-2" />
               New Report / አዲስ ሪፖርት
             </button>
           )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto scrollbar-hide touch-pan-x">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-bold">Guest / እንግዳ</th>
@@ -395,8 +412,8 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto scrollbar-hide touch-pan-x">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-bold">Guest / እንግዳ</th>
@@ -550,12 +567,21 @@ export const Dashboard: React.FC = () => {
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.aside
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            className="fixed lg:relative z-50 w-72 h-screen bg-white border-r border-slate-200 flex flex-col"
-          >
+          <>
+            {/* Mobile Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              className="fixed lg:relative z-50 w-72 h-screen bg-white border-r border-slate-200 flex flex-col"
+            >
             <div className="p-6 border-b border-slate-50">
               <div className="flex items-center mb-2">
                 <Shield className="w-8 h-8 text-amber-600 mr-2" />
@@ -612,6 +638,7 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
           </motion.aside>
+          </>
         )}
       </AnimatePresence>
 
@@ -652,7 +679,7 @@ export const Dashboard: React.FC = () => {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 touch-pan-y">
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'wanted' && renderWanted()}
           {activeTab === 'reports' && renderReports()}
@@ -675,15 +702,15 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <h3 className="text-xl font-bold text-slate-800">New Guest Registration / አዲስ እንግዳ መመዝገቢያ</h3>
                 <button onClick={() => setShowReportModal(false)} className="p-2 hover:bg-slate-50 rounded-lg">
                   <X className="w-6 h-6 text-slate-400" />
                 </button>
               </div>
-              <form onSubmit={handleAddReport} className="p-6 space-y-4">
+              <form onSubmit={handleAddReport} className="p-6 space-y-4 overflow-y-auto flex-1 touch-pan-y">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-500 uppercase">Guest Name / የእንግዳ ስም</label>
@@ -838,15 +865,15 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <h3 className="text-xl font-bold text-slate-800">Add Wanted Person / ተፈላጊ ጨምር</h3>
                 <button onClick={() => setShowWantedModal(false)} className="p-2 hover:bg-slate-50 rounded-lg">
                   <X className="w-6 h-6 text-slate-400" />
                 </button>
               </div>
-              <form onSubmit={handleAddWanted} className="p-6 space-y-4">
+              <form onSubmit={handleAddWanted} className="p-6 space-y-4 overflow-y-auto flex-1 touch-pan-y">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">Full Name / ሙሉ ስም</label>
                   <input 
@@ -911,14 +938,25 @@ export const Dashboard: React.FC = () => {
                                 if (!file || !user) return;
                                 try {
                                   setIsUploading(true);
-                                  const storageRef = ref(storage, `wanted/${user.uid}/${Date.now()}_${file.name}`);
-                                  const snapshot = await uploadBytes(storageRef, file);
-                                  const downloadURL = await getDownloadURL(snapshot.ref);
-                                  setWantedFormData(prev => ({ ...prev, photoUrl: downloadURL }));
+                                  
+                                  // Compress image
+                                  const options = {
+                                    maxSizeMB: 0.3,
+                                    maxWidthOrHeight: 800,
+                                    useWebWorker: true
+                                  };
+                                  const compressedFile = await imageCompression(file, options);
+
+                                  const reader = new FileReader();
+                                  reader.readAsDataURL(compressedFile);
+                                  reader.onloadend = () => {
+                                    const base64data = reader.result as string;
+                                    setWantedFormData(prev => ({ ...prev, photoUrl: base64data }));
+                                    setIsUploading(false);
+                                  };
                                 } catch (err) {
                                   console.error(err);
                                   alert("Upload failed");
-                                } finally {
                                   setIsUploading(false);
                                 }
                               }}
@@ -966,9 +1004,9 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
                 <div>
                   <h3 className="text-xl font-bold text-slate-800">Guest Details / የእንግዳ ዝርዝር</h3>
                   <p className="text-xs text-slate-500 font-medium">Report ID: {selectedReport.id}</p>
@@ -985,7 +1023,7 @@ export const Dashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto flex-1 touch-pan-y">
                 <div className="space-y-6">
                   <section>
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Identity / ማንነት</h4>
