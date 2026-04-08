@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { handleFirestoreError, OperationType } from './utils';
 
 interface AuthContextType {
   user: User | null;
@@ -38,12 +39,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (user) {
+      const path = `users/${user.uid}`;
       const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         setProfile(doc.data() || null);
         setLoading(false);
         setIsAuthReady(true);
       }, (error) => {
-        console.error("Profile fetch error:", error);
+        handleFirestoreError(error, OperationType.GET, path);
         setLoading(false);
         setIsAuthReady(true);
       });

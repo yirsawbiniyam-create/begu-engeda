@@ -37,7 +37,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
-import { cn } from '../lib/utils';
+import { cn, handleFirestoreError, OperationType } from '../lib/utils';
 import { format } from 'date-fns';
 
 // --- Sub-components ---
@@ -123,10 +123,14 @@ export const Dashboard: React.FC = () => {
         const unread = data.filter((r: any) => !r.isReadByPolice);
         setNotifications(unread);
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'reports');
     });
 
     const unsubWanted = onSnapshot(collection(db, 'wanted_persons'), (snapshot) => {
       setWantedPersons(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'wanted_persons');
     });
 
     return () => {
@@ -291,6 +295,89 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 
+  const renderWanted = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-2xl font-bold text-slate-800">Wanted Persons Database / የተፈላጊዎች መዝገብ</h3>
+        {profile?.role === 'regional_police' && (
+          <button 
+            onClick={() => setShowWantedModal(true)}
+            className="flex items-center px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-lg shadow-red-100"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Wanted Person / ተፈላጊ ጨምር
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {wantedPersons.map((person) => (
+          <motion.div 
+            key={person.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group"
+          >
+            <div className="aspect-square bg-slate-100 relative overflow-hidden">
+              {person.photoUrl ? (
+                <img 
+                  src={person.photoUrl} 
+                  alt={person.fullName} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <UserIcon className="w-16 h-16 text-slate-300" />
+                </div>
+              )}
+              <div className="absolute top-4 right-4">
+                <span className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold rounded-full uppercase shadow-lg">
+                  Wanted / ተፈላጊ
+                </span>
+              </div>
+            </div>
+            <div className="p-6">
+              <h4 className="text-lg font-bold text-slate-900 mb-1">{person.fullName}</h4>
+              <p className="text-sm text-slate-500 line-clamp-2 mb-4">{person.description}</p>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                <div className="flex items-center text-xs text-slate-400">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {format(new Date(person.createdAt), 'MMM dd, yyyy')}
+                </div>
+                <button className="text-amber-600 font-bold text-sm hover:underline">
+                  View Details
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const [showWantedModal, setShowWantedModal] = useState(false);
+  const [wantedFormData, setWantedFormData] = useState({
+    fullName: '',
+    description: '',
+    photoUrl: ''
+  });
+
+  const handleAddWanted = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, 'wanted_persons'), {
+        ...wantedFormData,
+        postedBy: user?.uid,
+        createdAt: new Date().toISOString()
+      });
+      setShowWantedModal(false);
+      setWantedFormData({ fullName: '', description: '', photoUrl: '' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
@@ -400,9 +487,10 @@ export const Dashboard: React.FC = () => {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === 'overview' && renderOverview()}
+          {activeTab === 'wanted' && renderWanted()}
           
           {/* Placeholder for other tabs */}
-          {activeTab !== 'overview' && (
+          {activeTab !== 'overview' && activeTab !== 'wanted' && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
               <FileText className="w-16 h-16 mb-4 opacity-20" />
               <p className="text-lg font-medium">Coming Soon / በቅርቡ ይጠብቁ</p>
@@ -513,6 +601,79 @@ export const Dashboard: React.FC = () => {
                     className="px-8 py-2.5 bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-700 transition"
                   >
                     Submit Report / ሪፖርት ላክ
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Wanted Modal (Regional Police) */}
+      <AnimatePresence>
+        {showWantedModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWantedModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-slate-800">Add Wanted Person / ተፈላጊ ጨምር</h3>
+                <button onClick={() => setShowWantedModal(false)} className="p-2 hover:bg-slate-50 rounded-lg">
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+              <form onSubmit={handleAddWanted} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Full Name / ሙሉ ስም</label>
+                  <input 
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-red-500"
+                    value={wantedFormData.fullName}
+                    onChange={(e) => setWantedFormData({...wantedFormData, fullName: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Description / መግለጫ</label>
+                  <textarea 
+                    required
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-red-500"
+                    value={wantedFormData.description}
+                    onChange={(e) => setWantedFormData({...wantedFormData, description: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Photo URL / ፎቶ</label>
+                  <input 
+                    placeholder="https://..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-red-500"
+                    value={wantedFormData.photoUrl}
+                    onChange={(e) => setWantedFormData({...wantedFormData, photoUrl: e.target.value})}
+                  />
+                </div>
+                <div className="pt-4 flex justify-end space-x-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowWantedModal(false)}
+                    className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition"
+                  >
+                    Cancel / ሰርዝ
+                  </button>
+                  <button 
+                    type="submit"
+                    className="px-8 py-2.5 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition"
+                  >
+                    Post Wanted / ተፈላጊውን ለጥፍ
                   </button>
                 </div>
               </form>

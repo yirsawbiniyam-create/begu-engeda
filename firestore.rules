@@ -52,8 +52,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        (getUserData().role == 'regional_police' || 
-         (request.auth.token.email == "yirsawbiniyam@gmail.com" && request.auth.token.email_verified == true));
+        ( (request.auth.token.email in ["yirsawbiniyam@gmail.com", "policeregion551@gmail.com"] && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'regional_police')
+        );
     }
 
     function isPolice() {
