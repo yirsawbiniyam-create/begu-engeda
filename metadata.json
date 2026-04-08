@@ -1,0 +1,5 @@
+{
+  "name": "Begu Engeda (ቤጉ እንግዳ)",
+  "description": "Benishangul Gumuz Region Police Commission Guest Monitoring System",
+  "requestFramePermissions": ["camera"]
+}

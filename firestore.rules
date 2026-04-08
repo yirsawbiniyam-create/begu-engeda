@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - fullName: string
+    //   - email: string
+    //   - role: string (receptionist, zone_police, city_police, regional_police)
+    //   - hotelName: string (optional)
+    //   - hotelAddress: map (region, zone, city, wereda)
+    //   - policeJurisdiction: map (region, zone, city)
+    //
+    // Collection: reports
+    // Document ID: auto-generated
+    // Fields:
+    //   - guestName: string
+    //   - receptionistUid: string
+    //   - hotelName: string
+    //   - hotelAddress: map
+    //   - isWantedMatch: bool
+    //   - isReadByPolice: bool
+    //
+    // Collection: wanted_persons
+    // Document ID: auto-generated
+    // Fields:
+    //   - fullName: string
+    //   - description: string
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (getUserData().role == 'regional_police' || 
+         (request.auth.token.email == "yirsawbiniyam@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isPolice() {
+      return isAuthenticated() && getUserData().role in ['zone_police', 'city_police', 'regional_police'];
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['fullName', 'email', 'role']) &&
+             data.fullName is string && data.fullName.size() < 100 &&
+             data.email is string && data.role in ['receptionist', 'zone_police', 'city_police', 'regional_police'];
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['guestName', 'receptionistUid', 'hotelName']) &&
+             data.guestName is string && data.guestName.size() < 100 &&
+             data.hotelName is string && data.hotelName.size() < 100;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.receptionistUid) || 
+        isPolice()
+      );
+      allow create: if isAuthenticated() && getUserData().role == 'receptionist' && isValidReport(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (isPolice() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isReadByPolice'])) ||
+        isAdmin()
+      );
+    }
+
+    match /wanted_persons/{personId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System users (Receptionists, Police)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "role": { "type": "string", "enum": ["receptionist", "zone_police", "city_police", "regional_police"] },
+        "hotelName": { "type": "string", "description": "Only for receptionists" },
+        "hotelAddress": { "type": "object", "description": "Region, Zone, City, Wereda" },
+        "policeJurisdiction": { "type": "object", "description": "Region, Zone, City" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "GuestReport": {
+      "title": "Guest Report",
+      "description": "Guest registration form sent by receptionists",
+      "type": "object",
+      "properties": {
+        "guestName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "origin": { "type": "string" },
+        "purpose": { "type": "string" },
+        "nationality": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "idCardUrl": { "type": "string" },
+        "receptionistUid": { "type": "string" },
+        "hotelName": { "type": "string" },
+        "hotelAddress": { "type": "object" },
+        "isWantedMatch": { "type": "boolean" },
+        "isReadByPolice": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["guestName", "receptionistUid", "hotelName", "createdAt"]
+    },
+    "WantedPerson": {
+      "title": "Wanted Person",
+      "description": "Persons of interest posted by regional police",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "description": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "postedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/reports/{reportId}": {
+      "schema": "GuestReport",
+      "description": "Guest reports"
+    },
+    "/wanted_persons/{personId}": {
+      "schema": "WantedPerson",
+      "description": "Wanted persons database"
+    }
+  }
+}
