@@ -20,7 +20,10 @@ import {
   Building2,
   Calendar,
   Clock,
-  User as UserIcon
+  User as UserIcon,
+  Camera,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -35,7 +38,8 @@ import {
   limit,
   getDocs
 } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 import { cn, handleFirestoreError, OperationType } from '../lib/utils';
 import { format } from 'date-fns';
@@ -80,6 +84,7 @@ export const Dashboard: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -138,6 +143,24 @@ export const Dashboard: React.FC = () => {
       unsubWanted();
     };
   }, [profile, user]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+      setIsUploading(true);
+      const storageRef = ref(storage, `id_cards/${user.uid}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      setFormData(prev => ({ ...prev, idCardUrl: downloadURL }));
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleAddReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -717,14 +740,67 @@ export const Dashboard: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">ID Card Photo URL / የመታወቂያ ፎቶ</label>
-                  <input 
-                    placeholder="https://..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                    value={formData.idCardUrl}
-                    onChange={(e) => setFormData({...formData, idCardUrl: e.target.value})}
-                  />
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">ID Card Photo / የመታወቂያ ፎቶ</label>
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 hover:bg-slate-100 transition-all group relative overflow-hidden">
+                    {formData.idCardUrl ? (
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden">
+                        <img 
+                          src={formData.idCardUrl} 
+                          alt="ID Preview" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({...formData, idCardUrl: ''})}
+                          className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4 group-hover:scale-110 transition-transform">
+                          {isUploading ? (
+                            <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+                          ) : (
+                            <Camera className="w-8 h-8 text-slate-400" />
+                          )}
+                        </div>
+                        <p className="text-sm font-bold text-slate-700 mb-1">
+                          {isUploading ? 'Uploading...' : 'Take Photo or Upload / ፎቶ አንሳ ወይም ጫን'}
+                        </p>
+                        <p className="text-xs text-slate-400">Supports Camera & Gallery</p>
+                        
+                        <div className="mt-4 flex space-x-2">
+                          <label className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 cursor-pointer hover:bg-slate-50 transition flex items-center">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Gallery
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={handleFileUpload}
+                              disabled={isUploading}
+                            />
+                          </label>
+                          <label className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-bold cursor-pointer hover:bg-amber-700 transition flex items-center shadow-lg shadow-amber-100">
+                            <Camera className="w-4 h-4 mr-2" />
+                            Camera
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              capture="environment" 
+                              className="hidden" 
+                              onChange={handleFileUpload}
+                              disabled={isUploading}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="pt-4 flex justify-end space-x-3">
                   <button 
@@ -791,13 +867,68 @@ export const Dashboard: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Photo URL / ፎቶ</label>
-                  <input 
-                    placeholder="https://..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-red-500"
-                    value={wantedFormData.photoUrl}
-                    onChange={(e) => setWantedFormData({...wantedFormData, photoUrl: e.target.value})}
-                  />
+                  <label className="text-xs font-bold text-slate-500 uppercase">Photo / ፎቶ</label>
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 hover:bg-slate-100 transition-all group relative overflow-hidden">
+                    {wantedFormData.photoUrl ? (
+                      <div className="relative w-full aspect-square rounded-xl overflow-hidden">
+                        <img 
+                          src={wantedFormData.photoUrl} 
+                          alt="Wanted Preview" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setWantedFormData({...wantedFormData, photoUrl: ''})}
+                          className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4 group-hover:scale-110 transition-transform">
+                          {isUploading ? (
+                            <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
+                          ) : (
+                            <Camera className="w-8 h-8 text-slate-400" />
+                          )}
+                        </div>
+                        <p className="text-sm font-bold text-slate-700 mb-1">
+                          {isUploading ? 'Uploading...' : 'Upload Photo / ፎቶ ጫን'}
+                        </p>
+                        
+                        <div className="mt-4 flex space-x-2">
+                          <label className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 cursor-pointer hover:bg-slate-50 transition flex items-center">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Gallery
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file || !user) return;
+                                try {
+                                  setIsUploading(true);
+                                  const storageRef = ref(storage, `wanted/${user.uid}/${Date.now()}_${file.name}`);
+                                  const snapshot = await uploadBytes(storageRef, file);
+                                  const downloadURL = await getDownloadURL(snapshot.ref);
+                                  setWantedFormData(prev => ({ ...prev, photoUrl: downloadURL }));
+                                } catch (err) {
+                                  console.error(err);
+                                  alert("Upload failed");
+                                } finally {
+                                  setIsUploading(false);
+                                }
+                              }}
+                              disabled={isUploading}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="pt-4 flex justify-end space-x-3">
                   <button 

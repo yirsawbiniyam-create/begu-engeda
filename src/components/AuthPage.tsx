@@ -27,8 +27,16 @@ type UserRole = 'receptionist' | 'zone_police' | 'city_police' | 'regional_polic
 
 export const AuthPage: React.FC = () => {
   const { user, profile } = useAuth();
-  const [mode, setMode] = useState<AuthMode>(user && !profile ? 'register' : 'role-select');
+  const [mode, setMode] = useState<AuthMode>('role-select');
   const [role, setRole] = useState<UserRole | null>(null);
+
+  // Automatically switch to register mode if user exists but profile is missing
+  React.useEffect(() => {
+    if (user && !profile && mode !== 'register') {
+      setMode('register');
+      if (user.email) setEmail(user.email);
+    }
+  }, [user, profile, mode]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -220,12 +228,15 @@ export const AuthPage: React.FC = () => {
                 </div>
 
                 {user && !profile && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-4">
-                    <p className="text-sm text-amber-800 font-bold">
-                      Account exists but profile is missing. Please register below to complete setup.
-                    </p>
-                    <p className="text-xs text-amber-600 mt-1">
-                      አካውንት አለዎት ነገር ግን ፕሮፋይል አልተሞላም። እባክዎ ምዝገባውን ያጠናቅቁ።
+                  <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl mb-6 shadow-sm">
+                    <div className="flex items-center mb-2">
+                      <Shield className="w-5 h-5 text-amber-600 mr-2" />
+                      <p className="text-sm text-amber-800 font-bold">
+                        Complete Your Profile / ምዝገባውን ያጠናቅቁ
+                      </p>
+                    </div>
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      Your account exists, but we need a few more details to set up your dashboard. Please fill in the information below.
                     </p>
                   </div>
                 )}
@@ -297,51 +308,59 @@ export const AuthPage: React.FC = () => {
                   </>
                 )}
 
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder="Email Address / ኢሜል"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
+                {!user && (
+                  <>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <input
+                        type="email"
+                        placeholder="Email Address / ኢሜል"
+                        required
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
 
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-                  <input
-                    type="password"
-                    placeholder="Password / የይለፍ ቃል"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <input
+                        type="password"
+                        placeholder="Password / የይለፍ ቃል"
+                        required
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-lg shadow-amber-200 transition-all disabled:opacity-50"
                 >
-                  {loading ? 'Processing...' : mode === 'login' ? 'Login / ግባ' : 'Register / ተመዝገብ'}
+                  {loading ? 'Processing...' : (user && !profile) ? 'Complete Registration / ምዝገባውን ያጠናቅቁ' : mode === 'login' ? 'Login / ግባ' : 'Register / ተመዝገብ'}
                 </button>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400">Or continue with</span></div>
-                </div>
+                {!user && (
+                  <>
+                    <div className="relative my-6">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                      <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400">Or continue with</span></div>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="w-full flex items-center justify-center py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
-                >
-                  <Globe className="w-5 h-5 mr-2 text-slate-600" />
-                  <span className="font-medium text-slate-700">Google Login</span>
-                </button>
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      className="w-full flex items-center justify-center py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
+                    >
+                      <Globe className="w-5 h-5 mr-2 text-slate-600" />
+                      <span className="font-medium text-slate-700">Google Login</span>
+                    </button>
+                  </>
+                )}
 
                 <p className="text-center text-sm text-slate-500 mt-4">
                   {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
