@@ -138,6 +138,79 @@ export const Dashboard: React.FC = () => {
     }
   }, [selectedReport]);
 
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleBackup = async () => {
+    try {
+      const backupData = {
+        reports,
+        wantedPersons,
+        backupDate: new Date().toISOString(),
+        version: '1.0'
+      };
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `begu_engeda_backup_${format(new Date(), 'yyyy-MM-dd')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Backup failed:', err);
+      alert('Backup failed / ባክአፕ አልተሳካም');
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        setIsRestoring(true);
+        const content = event.target?.result as string;
+        const data = JSON.parse(content);
+
+        if (!data.reports || !data.wantedPersons) {
+          throw new Error('Invalid backup file format');
+        }
+
+        // Restore reports
+        for (const report of data.reports) {
+          const { id, ...reportData } = report;
+          await addDoc(collection(db, 'reports'), {
+            ...reportData,
+            restoredAt: new Date().toISOString()
+          });
+        }
+
+        // Restore wanted persons (only if regional police)
+        if (profile?.role === 'regional_police') {
+          for (const person of data.wantedPersons) {
+            const { id, ...personData } = person;
+            await addDoc(collection(db, 'wanted_persons'), {
+              ...personData,
+              restoredAt: new Date().toISOString()
+            });
+          }
+        }
+
+        alert('Restore completed successfully / ሪስቶር በተሳካ ሁኔታ ተጠናቋል');
+      } catch (err) {
+        console.error('Restore failed:', err);
+        alert('Restore failed: Invalid file or permission error / ሪስቶር አልተሳካም፡ የተሳሳተ ፋይል ወይም የፈቃድ ችግር');
+      } finally {
+        setIsRestoring(false);
+        e.target.value = ''; // Reset input
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     try {
@@ -305,33 +378,33 @@ export const Dashboard: React.FC = () => {
     }));
 
     const statusData = [
-      { name: 'Clear', value: reports.filter(r => !r.isWantedMatch).length, color: '#10b981' },
-      { name: 'Wanted', value: reports.filter(r => r.isWantedMatch).length, color: '#ef4444' }
+      { name: 'Clear / ንጹህ', value: reports.filter(r => !r.isWantedMatch).length, color: '#10b981' },
+      { name: 'Wanted / ተፈላጊ', value: reports.filter(r => r.isWantedMatch).length, color: '#ef4444' }
     ];
 
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            label="Total Reports" 
+            label="Total Reports / ጠቅላላ ሪፖርቶች" 
             value={reports.length} 
             icon={FileText} 
             color="bg-blue-600" 
           />
           <StatCard 
-            label="Wanted Matches" 
+            label="Wanted Matches / የተገኙ ተፈላጊዎች" 
             value={reports.filter(r => r.isWantedMatch).length} 
             icon={ShieldAlert} 
             color="bg-red-600" 
           />
           <StatCard 
-            label="Active Wanted" 
+            label="Active Wanted / ንቁ ተፈላጊዎች" 
             value={wantedPersons.length} 
             icon={Users} 
             color="bg-amber-600" 
           />
           <StatCard 
-            label="Unread Alerts" 
+            label="Unread Alerts / ያልተነበቡ ማስጠንቀቂያዎች" 
             value={notifications.length} 
             icon={Bell} 
             color="bg-indigo-600" 
@@ -340,7 +413,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 mb-6">Report Trends (Last 7 Days)</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-6">Report Trends (Last 7 Days) / የሪፖርት ሁኔታ (ያለፉት 7 ቀናት)</h3>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
@@ -357,7 +430,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 mb-6">Status Distribution</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-6">Status Distribution / የሁኔታዎች ስርጭት</h3>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -532,7 +605,7 @@ export const Dashboard: React.FC = () => {
                   {format(new Date(person.createdAt), 'MMM dd, yyyy')}
                 </div>
                 <button className="text-amber-600 font-bold text-sm hover:underline">
-                  View Details
+                  View Details / ዝርዝር ይመልከቱ
                 </button>
               </div>
             </div>
@@ -798,7 +871,29 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-4 space-x-4">
+              {profile?.role === 'regional_police' && (
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={handleBackup}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold text-sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Backup / ባክአፕ
+                  </button>
+                  <label className="flex items-center px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition font-bold text-sm cursor-pointer">
+                    {isRestoring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                    Restore / ሪስቶር
+                    <input 
+                      type="file" 
+                      accept=".json" 
+                      className="hidden" 
+                      onChange={handleRestore}
+                      disabled={isRestoring}
+                    />
+                  </label>
+                </div>
+              )}
               <button 
                 onClick={handleUpdateProfile}
                 disabled={isUploading}
@@ -812,32 +907,32 @@ export const Dashboard: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-50">
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Full Name</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Full Name / ሙሉ ስም</label>
               <p className="font-medium text-slate-800">{profile?.fullName}</p>
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
-              <p className="font-medium text-slate-800">{profile?.phoneNumber || 'Not provided'}</p>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Phone Number / ስልክ ቁጥር</label>
+              <p className="font-medium text-slate-800">{profile?.phoneNumber || 'Not provided / አልተገለጸም'}</p>
             </div>
             {profile?.role === 'receptionist' ? (
               <>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Hotel Name</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Hotel Name / የሆቴሉ ስም</label>
                   <p className="font-medium text-slate-800">{profile?.hotelName}</p>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address / አድራሻ</label>
                   <p className="font-medium text-slate-800">
-                    {profile?.hotelAddress?.city ? `City: ${profile.hotelAddress.city}` : `Zone: ${profile.hotelAddress.zone}`}, 
-                    Wereda: {profile.hotelAddress.wereda}
+                    {profile?.hotelAddress?.city ? `City: ${profile.hotelAddress.city} / ከተማ: ${profile.hotelAddress.city}` : `Zone: ${profile.hotelAddress.zone} / ዞን: ${profile.hotelAddress.zone}`}, 
+                    Wereda: {profile.hotelAddress.wereda} / ወረዳ: {profile.hotelAddress.wereda}
                   </p>
                 </div>
               </>
             ) : (
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Jurisdiction</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Jurisdiction / የስራ ክልል</label>
                 <p className="font-medium text-slate-800">
-                  {profile?.policeJurisdiction?.city || profile?.policeJurisdiction?.zone || 'Regional'}
+                  {profile?.policeJurisdiction?.city || profile?.policeJurisdiction?.zone || 'Regional / የክልል'}
                 </p>
               </div>
             )}
@@ -1029,6 +1124,7 @@ export const Dashboard: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Guest Name / የእንግዳ ስም</label>
                     <input 
                       required
+                      placeholder="e.g. Abebe Kebede / ለምሳሌ አበበ ከበደ"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                       value={formData.guestName}
                       onChange={(e) => setFormData({...formData, guestName: e.target.value})}
@@ -1038,6 +1134,7 @@ export const Dashboard: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Phone / ስልክ</label>
                     <input 
                       required
+                      placeholder="e.g. 0911223344 / ለምሳሌ 0911223344"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                       value={formData.phoneNumber}
                       onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
@@ -1047,6 +1144,7 @@ export const Dashboard: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Origin / የመጣበት ቦታ</label>
                     <input 
                       required
+                      placeholder="e.g. Addis Ababa / ለምሳሌ አዲስ አበባ"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                       value={formData.origin}
                       onChange={(e) => setFormData({...formData, origin: e.target.value})}
@@ -1056,6 +1154,7 @@ export const Dashboard: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Purpose / የመጣበት ምክንያት</label>
                     <input 
                       required
+                      placeholder="e.g. Business / ለምሳሌ ለስራ"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                       value={formData.purpose}
                       onChange={(e) => setFormData({...formData, purpose: e.target.value})}
@@ -1065,6 +1164,7 @@ export const Dashboard: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Nationality / ዜግነት</label>
                     <input 
                       required
+                      placeholder="e.g. Ethiopian / ለምሳሌ ኢትዮጵያዊ"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                       value={formData.nationality}
                       onChange={(e) => setFormData({...formData, nationality: e.target.value})}
@@ -1074,6 +1174,7 @@ export const Dashboard: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase">Room Number / የአልጋ ቁጥር</label>
                     <input 
                       required
+                      placeholder="e.g. 204 / ለምሳሌ 204"
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                       value={formData.roomNumber}
                       onChange={(e) => setFormData({...formData, roomNumber: e.target.value})}
@@ -1191,6 +1292,7 @@ export const Dashboard: React.FC = () => {
                   <label className="text-xs font-bold text-slate-500 uppercase">Full Name / ሙሉ ስም</label>
                   <input 
                     required
+                    placeholder="e.g. Abebe Kebede / ለምሳሌ አበበ ከበደ"
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-red-500"
                     value={wantedFormData.fullName}
                     onChange={(e) => setWantedFormData({...wantedFormData, fullName: e.target.value})}
@@ -1201,6 +1303,7 @@ export const Dashboard: React.FC = () => {
                   <textarea 
                     required
                     rows={3}
+                    placeholder="Describe why this person is wanted... / ይህ ሰው ለምን እንደሚፈለግ ይግለጹ..."
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-red-500"
                     value={wantedFormData.description}
                     onChange={(e) => setWantedFormData({...wantedFormData, description: e.target.value})}

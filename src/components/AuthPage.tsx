@@ -227,7 +227,7 @@ export const AuthPage: React.FC = () => {
                     onClick={() => setMode('role-select')}
                     className="text-sm text-amber-600 hover:underline flex items-center"
                   >
-                    ← Back to Roles
+                    ← Back / ተመለስ
                   </button>
                   <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded uppercase text-slate-600">
                     {role?.replace('_', ' ')}
@@ -243,7 +243,7 @@ export const AuthPage: React.FC = () => {
                       </p>
                     </div>
                     <p className="text-xs text-amber-700 leading-relaxed">
-                      Your account exists, but we need a few more details to set up your dashboard. Please fill in the information below.
+                      Your account exists, but we need a few more details to set up your dashboard. / መለያዎ ተፈጥሯል፣ ነገር ግን ዳሽቦርድዎን ለማዘጋጀት ጥቂት ተጨማሪ ዝርዝሮች ያስፈልጉናል።
                     </p>
                   </div>
                 )}
