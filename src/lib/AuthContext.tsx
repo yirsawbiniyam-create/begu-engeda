@@ -39,6 +39,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (user) {
+      // Special handling for Regional Police who don't register
+      if (user.email === 'policeregion551@gmail.com') {
+        setProfile({
+          fullName: 'Regional Police Admin / የክልል ፖሊስ ተቆጣጣሪ',
+          role: 'regional_police',
+          email: user.email,
+          isVirtual: true
+        });
+        setLoading(false);
+        setIsAuthReady(true);
+        return;
+      }
+
       const path = `users/${user.uid}`;
       const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         setProfile(doc.data() || null);

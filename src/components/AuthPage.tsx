@@ -67,16 +67,22 @@ export const AuthPage: React.FC = () => {
       const result = await signInWithPopup(auth, provider);
       const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
-      if (!userDoc.exists() && role) {
-        // New user from social login
-        await setDoc(doc(db, 'users', result.user.uid), {
-          uid: result.user.uid,
-          email: result.user.email,
-          fullName: result.user.displayName || fullName,
-          role: role,
-          createdAt: new Date().toISOString(),
-          ...(role === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
-        });
+      if (!userDoc.exists()) {
+        const finalRole = (result.user.email === 'policeregion551@gmail.com' || result.user.email === 'yirsawbiniyam@gmail.com') 
+          ? 'regional_police' 
+          : role;
+
+        if (finalRole) {
+          // New user from social login
+          await setDoc(doc(db, 'users', result.user.uid), {
+            uid: result.user.uid,
+            email: result.user.email,
+            fullName: result.user.displayName || fullName,
+            role: finalRole,
+            createdAt: new Date().toISOString(),
+            ...(finalRole === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
+          });
+        }
       }
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
@@ -304,6 +310,34 @@ export const AuthPage: React.FC = () => {
                           />
                         </div>
                       </>
+                    )}
+
+                    {(role === 'city_police' || role === 'zone_police') && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-slate-500 uppercase">Jurisdiction / የስራ ክልል</p>
+                        <div className="grid grid-cols-1 gap-2">
+                          {role === 'zone_police' && (
+                            <input
+                              type="text"
+                              placeholder="Assigned Zone / የተመደቡበት ዞን"
+                              required
+                              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                              value={jurisdiction.zone}
+                              onChange={(e) => setJurisdiction({...jurisdiction, zone: e.target.value})}
+                            />
+                          )}
+                          {role === 'city_police' && (
+                            <input
+                              type="text"
+                              placeholder="Assigned City / የተመደቡበት ከተማ"
+                              required
+                              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                              value={jurisdiction.city}
+                              onChange={(e) => setJurisdiction({...jurisdiction, city: e.target.value})}
+                            />
+                          )}
+                        </div>
+                      </div>
                     )}
                   </>
                 )}
