@@ -29,7 +29,10 @@ import {
   Save,
   Phone,
   Mail,
-  Map as MapIcon
+  Map as MapIcon,
+  Smartphone,
+  ExternalLink,
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -394,93 +397,137 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h3 className="text-lg font-bold text-slate-800">Recent Activity / የቅርብ ጊዜ እንቅስቃሴዎች</h3>
-          {profile?.role === 'receptionist' && (
-            <button 
-              onClick={() => setShowReportModal(true)}
-              className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Report / አዲስ ሪፖርት
-            </button>
-          )}
-        </div>
-        <div className="overflow-x-auto scrollbar-hide touch-pan-x">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="px-6 py-4 font-bold">Guest / እንግዳ</th>
-                <th className="px-6 py-4 font-bold">Hotel / ሆቴል</th>
-                <th className="px-6 py-4 font-bold">Date / ቀን</th>
-                <th className="px-6 py-4 font-bold">Status / ሁኔታ</th>
-                <th className="px-6 py-4 font-bold">Action / ተግባር</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {reports.slice(0, 10).map((report) => (
-                <tr key={report.id} className="hover:bg-slate-50 transition">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-white",
-                        report.isWantedMatch ? "bg-red-500" : "bg-slate-200 text-slate-600"
-                      )}>
-                        {report.guestName[0]}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{report.guestName}</p>
-                        <p className="text-xs text-slate-500">{report.phoneNumber}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
-                    <p className="text-xs text-slate-400">
-                      {report.hotelAddress?.city || report.hotelAddress?.zone}, {report.hotelAddress?.wereda}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-xs text-slate-500">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {format(new Date(report.createdAt), 'MMM dd, yyyy')}
-                    </div>
-                    <div className="flex items-center text-xs text-slate-400 mt-1">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {format(new Date(report.createdAt), 'HH:mm')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {report.isWantedMatch ? (
-                      <span className="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded-full uppercase animate-pulse">
-                        Wanted Match / ተፈላጊ
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">
-                        Clear / ሰላም
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <button 
-                      onClick={() => {
-                        setSelectedReport(report);
-                        if (profile.role !== 'receptionist') markAsRead(report.id);
-                      }}
-                      className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
-                  </td>
+          <div className="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <h3 className="text-lg font-bold text-slate-800">Recent Activity / የቅርብ ጊዜ እንቅስቃሴዎች</h3>
+            {profile?.role === 'receptionist' && (
+              <button 
+                onClick={() => setShowReportModal(true)}
+                className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Report / አዲስ ሪፖርት
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto scrollbar-hide touch-pan-x">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                  <th className="px-6 py-4 font-bold">Guest / እንግዳ</th>
+                  <th className="px-6 py-4 font-bold">Hotel / ሆቴል</th>
+                  <th className="px-6 py-4 font-bold">Date / ቀን</th>
+                  <th className="px-6 py-4 font-bold">Status / ሁኔታ</th>
+                  <th className="px-6 py-4 font-bold">Action / ተግባር</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {reports.slice(0, 10).map((report) => (
+                  <tr key={report.id} className="hover:bg-slate-50 transition">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-white",
+                          report.isWantedMatch ? "bg-red-500" : "bg-slate-200 text-slate-600"
+                        )}>
+                          {report.guestName[0]}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{report.guestName}</p>
+                          <p className="text-xs text-slate-500">{report.phoneNumber}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
+                      <p className="text-xs text-slate-400">
+                        {report.hotelAddress?.city || report.hotelAddress?.zone}, {report.hotelAddress?.wereda}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-xs text-slate-500">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {format(new Date(report.createdAt), 'MMM dd, yyyy')}
+                      </div>
+                      <div className="flex items-center text-xs text-slate-400 mt-1">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {format(new Date(report.createdAt), 'HH:mm')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {report.isWantedMatch ? (
+                        <span className="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded-full uppercase animate-pulse">
+                          Wanted Match / ተፈላጊ
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">
+                          Clear / ሰላም
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => {
+                          setSelectedReport(report);
+                          if (profile.role !== 'receptionist') markAsRead(report.id);
+                        }}
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700 shadow-xl text-white">
+            <div className="flex items-center mb-4">
+              <div className="p-3 bg-amber-500 rounded-xl mr-4">
+                <Smartphone className="w-6 h-6 text-white" />
+              </div>
+              <h4 className="text-lg font-bold">EFP APP</h4>
+            </div>
+            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+              ይህንን የወንጀል ጥቆማ መስጫ የሞባይል መተግበሪን በመጠቀም የወንጀል፣ የጠፉ ሰዎች እና የተለያዩ ጥቆማዎችን ለመስጠት EFP APP ይጠቀሙ።
+            </p>
+            <a 
+              href="https://play.google.com/store/apps/details?id=guardianX.com.guardian_x" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2 bg-white text-slate-900 rounded-lg font-bold text-sm hover:bg-slate-100 transition"
+            >
+              Download App / መተግበሪያውን ያውርዱ
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </a>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-600 to-amber-700 p-6 rounded-2xl border border-amber-500 shadow-xl text-white">
+            <div className="flex items-center mb-4">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl mr-4">
+                <Globe className="w-6 h-6 text-white" />
+              </div>
+              <h4 className="text-lg font-bold">Technology Center / የቴክኖሎጂ ማዕከል</h4>
+            </div>
+            <p className="text-amber-50 text-sm mb-6 leading-relaxed">
+              በቤንሻንጉል ጉሙዝ ክልል ፖሊስ ኮሚሽን ቴክኖሎጂ ማስፋፊያ ድረ-ገፅ ይከታተሉ።
+            </p>
+            <a 
+              href="https://sites.google.com/view/bgpolicetechnologycenter" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2 bg-white text-amber-700 rounded-lg font-bold text-sm hover:bg-amber-50 transition"
+            >
+              Visit Website / ድረ-ገጹን ይጎብኙ
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </a>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   const renderWanted = () => (
     <div className="space-y-6">
