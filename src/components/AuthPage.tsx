@@ -43,6 +43,7 @@ export const AuthPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [locationType, setLocationType] = useState<'zone' | 'city'>('zone');
 
   // Receptionist specific
   const [hotelName, setHotelName] = useState('');
@@ -291,22 +292,59 @@ export const AuthPage: React.FC = () => {
                             onChange={(e) => setHotelName(e.target.value)}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-3">
+                          <label className="text-xs font-bold text-slate-500 uppercase">Location Type / የአድራሻ አይነት</label>
+                          <div className="flex p-1 bg-slate-100 rounded-xl">
+                            <button
+                              type="button"
+                              onClick={() => setLocationType('zone')}
+                              className={cn(
+                                "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                                locationType === 'zone' ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                              )}
+                            >
+                              Zone / ዞን
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLocationType('city')}
+                              className={cn(
+                                "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                                locationType === 'city' ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                              )}
+                            >
+                              City Admin / ከተማ አስተዳደር
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2">
+                          {locationType === 'zone' ? (
+                            <input
+                              type="text"
+                              placeholder="Zone Name / የዞን ስም"
+                              required
+                              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                              value={address.zone}
+                              onChange={(e) => setAddress({...address, zone: e.target.value, city: ''})}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="City Name / የከተማ ስም"
+                              required
+                              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                              value={address.city}
+                              onChange={(e) => setAddress({...address, city: e.target.value, zone: ''})}
+                            />
+                          )}
                           <input
                             type="text"
-                            placeholder="Zone / ዞን"
+                            placeholder="Wereda / ወረዳ"
                             required
                             className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
-                            value={address.zone}
-                            onChange={(e) => setAddress({...address, zone: e.target.value})}
-                          />
-                          <input
-                            type="text"
-                            placeholder="City / ከተማ"
-                            required
-                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
-                            value={address.city}
-                            onChange={(e) => setAddress({...address, city: e.target.value})}
+                            value={address.wereda}
+                            onChange={(e) => setAddress({...address, wereda: e.target.value})}
                           />
                         </div>
                       </>

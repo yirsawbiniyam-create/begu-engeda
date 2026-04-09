@@ -114,8 +114,8 @@ export const Dashboard: React.FC = () => {
     fullName: '',
     phoneNumber: '',
     hotelName: '',
-    hotelAddress: { city: '', zone: '' },
-    policeJurisdiction: { city: '', zone: '' }
+    hotelAddress: { city: '', zone: '', wereda: '', region: 'Benishangul-Gumuz' },
+    policeJurisdiction: { city: '', zone: '', region: 'Benishangul-Gumuz' }
   });
 
   useEffect(() => {
@@ -124,8 +124,8 @@ export const Dashboard: React.FC = () => {
         fullName: profile.fullName || '',
         phoneNumber: profile.phoneNumber || '',
         hotelName: profile.hotelName || '',
-        hotelAddress: profile.hotelAddress || { city: '', zone: '' },
-        policeJurisdiction: profile.policeJurisdiction || { city: '', zone: '' }
+        hotelAddress: profile.hotelAddress || { city: '', zone: '', wereda: '', region: 'Benishangul-Gumuz' },
+        policeJurisdiction: profile.policeJurisdiction || { city: '', zone: '', region: 'Benishangul-Gumuz' }
       });
     }
   }, [profile]);
@@ -171,10 +171,13 @@ export const Dashboard: React.FC = () => {
       reportsQuery = query(collection(db, 'reports'));
     } else {
       // Zone/City Police - filter by jurisdiction
-      const jurisdictionKey = profile.role === 'zone_police' ? 'hotelAddress.zone' : 'hotelAddress.city';
+      const isZone = profile.role === 'zone_police';
+      const jurisdictionKey = isZone ? 'hotelAddress.zone' : 'hotelAddress.city';
+      const jurisdictionValue = isZone ? profile.policeJurisdiction.zone : profile.policeJurisdiction.city;
+      
       reportsQuery = query(
         collection(db, 'reports'),
-        where(jurisdictionKey, '==', profile.policeJurisdiction[profile.role === 'zone_police' ? 'zone' : 'city'])
+        where(jurisdictionKey, '==', jurisdictionValue)
       );
     }
 
@@ -424,7 +427,9 @@ export const Dashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
-                    <p className="text-xs text-slate-400">{report.hotelAddress?.city}, {report.hotelAddress?.zone}</p>
+                    <p className="text-xs text-slate-400">
+                      {report.hotelAddress?.city || report.hotelAddress?.zone}, {report.hotelAddress?.wereda}
+                    </p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center text-xs text-slate-500">
@@ -575,7 +580,9 @@ export const Dashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
-                    <p className="text-xs text-slate-400">{report.hotelAddress?.city}, {report.hotelAddress?.zone}</p>
+                    <p className="text-xs text-slate-400">
+                      {report.hotelAddress?.city || report.hotelAddress?.zone}, {report.hotelAddress?.wereda}
+                    </p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center text-xs text-slate-500">
@@ -694,30 +701,68 @@ export const Dashboard: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase">City / ከተማ</label>
-                      <input 
-                        type="text" 
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
-                        value={editProfileData.hotelAddress.city}
-                        onChange={(e) => setEditProfileData({
-                          ...editProfileData, 
-                          hotelAddress: { ...editProfileData.hotelAddress, city: e.target.value }
-                        })}
-                      />
+                      <label className="text-xs font-bold text-slate-500 uppercase">Location Type / የአድራሻ አይነት</label>
+                      <div className="flex p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setEditProfileData({
+                            ...editProfileData,
+                            hotelAddress: { ...editProfileData.hotelAddress, city: '' }
+                          })}
+                          className={cn(
+                            "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                            !editProfileData.hotelAddress.city ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
+                          )}
+                        >
+                          Zone / ዞን
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditProfileData({
+                            ...editProfileData,
+                            hotelAddress: { ...editProfileData.hotelAddress, zone: '' }
+                          })}
+                          className={cn(
+                            "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                            editProfileData.hotelAddress.city ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"
+                          )}
+                        >
+                          City Admin / ከተማ አስተዳደር
+                        </button>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase">Zone / ዞን</label>
-                      <input 
-                        type="text" 
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
-                        value={editProfileData.hotelAddress.zone}
-                        onChange={(e) => setEditProfileData({
-                          ...editProfileData, 
-                          hotelAddress: { ...editProfileData.hotelAddress, zone: e.target.value }
-                        })}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase">
+                          {!editProfileData.hotelAddress.city ? "Zone / ዞን" : "City / ከተማ"}
+                        </label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                          value={!editProfileData.hotelAddress.city ? editProfileData.hotelAddress.zone : editProfileData.hotelAddress.city}
+                          onChange={(e) => setEditProfileData({
+                            ...editProfileData, 
+                            hotelAddress: { 
+                              ...editProfileData.hotelAddress, 
+                              [!editProfileData.hotelAddress.city ? 'zone' : 'city']: e.target.value 
+                            }
+                          })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Wereda / ወረዳ</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                          value={editProfileData.hotelAddress.wereda}
+                          onChange={(e) => setEditProfileData({
+                            ...editProfileData, 
+                            hotelAddress: { ...editProfileData.hotelAddress, wereda: e.target.value }
+                          })}
+                        />
+                      </div>
                     </div>
                   </div>
                 </>
@@ -774,7 +819,10 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address</label>
-                  <p className="font-medium text-slate-800">{profile?.hotelAddress?.city}, {profile?.hotelAddress?.zone}</p>
+                  <p className="font-medium text-slate-800">
+                    {profile?.hotelAddress?.city ? `City: ${profile.hotelAddress.city}` : `Zone: ${profile.hotelAddress.zone}`}, 
+                    Wereda: {profile.hotelAddress.wereda}
+                  </p>
                 </div>
               </>
             ) : (
@@ -1296,7 +1344,10 @@ export const Dashboard: React.FC = () => {
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Hotel Info / የሆቴል መረጃ</h4>
                     <div className="space-y-3">
                       <DetailRow label="Hotel" value={selectedReport.hotelName} />
-                      <DetailRow label="Location" value={`${selectedReport.hotelAddress?.city}, ${selectedReport.hotelAddress?.zone}`} />
+                      <DetailRow 
+                        label="Location" 
+                        value={`${selectedReport.hotelAddress?.city || selectedReport.hotelAddress?.zone}, ${selectedReport.hotelAddress?.wereda}`} 
+                      />
                     </div>
                   </section>
                 </div>
