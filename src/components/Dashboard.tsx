@@ -32,7 +32,8 @@ import {
   Map as MapIcon,
   Smartphone,
   ExternalLink,
-  Globe
+  Globe,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -927,6 +928,112 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 
+  const renderManual = () => (
+    <div className="max-w-4xl space-y-8 pb-12">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-amber-600 p-8 text-white">
+          <h3 className="text-3xl font-bold mb-2">System Manual / የሲስተሙ መመሪያ</h3>
+          <p className="text-amber-100">ቤጉ እንግዳ | Begu Engeda - Police Monitoring System</p>
+        </div>
+        
+        <div className="p-8 space-y-10">
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">01</span>
+              መግቢያ (Introduction)
+            </h4>
+            <p className="text-slate-600 leading-relaxed">
+              "ቤጉ እንግዳ" በቤንሻንጉል ጉሙዝ ክልል ፖሊስ ኮሚሽን የቴክኖሎጂ ማስፋፊያ ማዕከል የበለፀገ ሲስተም ሲሆን፣ በክልሉ ውስጥ ባሉ ሆቴሎችና የእንግዳ ማረፊያዎች የሚስተናገዱ እንግዶችን መረጃ በዘመናዊና በዲጂታል መንገድ ለመመዝገብና ለፖሊስ ሪፖርት ለማድረግ የሚያስችል መተግበሪያ ነው።
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">02</span>
+              አላማ (Objective)
+            </h4>
+            <p className="text-slate-600 leading-relaxed">
+              የሲስተሙ ዋና አላማ በክልሉ የሚንቀሳቀሱ እንግዶችን መረጃ በአንድ ማዕከል በመሰብሰብ፣ የክልሉን ሰላምና ደህንነት ይበልጥ ማጠናከርና የወንጀል መከላከል ስራን በቴክኖሎጂ የታገዘ ማድረግ ነው።
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">03</span>
+              ግብ (Goal)
+            </h4>
+            <ul className="list-disc list-inside text-slate-600 space-y-2 ml-4">
+              <li>በክልሉ ያሉ ሆቴሎች በሙሉ የእንግዳ ምዝገባን በዲጂታል መንገድ እንዲያከናውኑ ማድረግ።</li>
+              <li>የመረጃ ልውውጥን ፍጥነትና ጥራት ማሳደግ።</li>
+              <li>ተፈላጊ ወንጀለኞችን በቅጽበት መለየት የሚያስችል አሰራር መዘርጋት።</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">04</span>
+              መነሻ ሁኔታ (Background)
+            </h4>
+            <p className="text-slate-600 leading-relaxed">
+              ቀደም ሲል የነበረው የእንግዶች ምዝገባ በወረቀት (Guest Book) የሚከናወን በመሆኑ፣ መረጃው ለፖሊስ በወቅቱ የማይደርስ፣ ለስህተት የተጋለጠ፣ እና ተፈላጊ ወንጀለኞችን ለመለየት አዳጋች የነበረ በመሆኑ ይህ ሲስተም እንዲበለፅግ ሆኗል።
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">05</span>
+              አጠቃቀሙ (Usage)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <h5 className="font-bold text-slate-800 mb-2">ሆቴሎች</h5>
+                <p className="text-sm text-slate-600">የእንግዳውን ስም፣ ስልክ፣ አድራሻ እና የመታወቂያ ፎቶ በሲስተሙ ላይ ይመዘግባሉ።</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <h5 className="font-bold text-slate-800 mb-2">ፖሊስ</h5>
+                <p className="text-sm text-slate-600">በየደረጃው (ከተማ፣ ዞን፣ ክልል) ሆኖ ወደ ክልሉ የገቡ እንግዶችን መረጃ በቀጥታ ይከታተላል።</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">06</span>
+              ጥቅሙ (Benefits)
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { t: 'ፈጣን መረጃ', d: 'መረጃው በሰከንዶች ውስጥ ይደርሳል' },
+                { t: 'ደህንነት', d: 'ተፈላጊዎችን ወዲያውኑ ይለያል' },
+                { t: 'ወጪ መቀነስ', d: 'ወረቀትና ጉልበት ይቆጥባል' },
+                { t: 'ትክክለኛነት', d: 'የተሟላ የመረጃ ክምችት ይፈጥራል' }
+              ].map(item => (
+                <div key={item.t} className="text-center p-4">
+                  <div className="font-bold text-amber-600 text-sm mb-1">{item.t}</div>
+                  <div className="text-[10px] text-slate-500">{item.d}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">07</span>
+              የሚያስፈልገው (Requirements)
+            </h4>
+            <div className="flex flex-wrap gap-3">
+              {['ስማርት ስልክ', 'ኮምፒውተር', 'ኢንተርኔት', 'የመረጃ ባለሙያ'].map(tag => (
+                <span key={tag} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-full text-sm font-medium">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+
   const [showWantedModal, setShowWantedModal] = useState(false);
   const [editingWantedId, setEditingWantedId] = useState<string | null>(null);
   const [wantedFormData, setWantedFormData] = useState({
@@ -1017,6 +1124,12 @@ export const Dashboard: React.FC = () => {
                 onClick={() => setActiveTab('wanted')} 
               />
               <SidebarItem 
+                icon={BookOpen} 
+                label="Manual / መመሪያ" 
+                active={activeTab === 'manual'} 
+                onClick={() => setActiveTab('manual')} 
+              />
+              <SidebarItem 
                 icon={Settings} 
                 label="Settings / ሴቲንግ" 
                 active={activeTab === 'settings'} 
@@ -1091,9 +1204,28 @@ export const Dashboard: React.FC = () => {
 
         {/* Content Area */}
         <div id="printable-content" className="flex-1 overflow-y-auto p-4 md:p-8 touch-pan-y">
+          {/* Strict Warning Message */}
+          <div className="mb-8 bg-red-50 border-l-4 border-red-600 p-5 rounded-r-2xl shadow-sm animate-pulse">
+            <div className="flex items-start">
+              <ShieldAlert className="w-6 h-6 text-red-600 mr-4 mt-1 shrink-0" />
+              <div>
+                <h4 className="text-red-800 font-bold text-sm mb-2 uppercase tracking-widest flex items-center">
+                  ጥብቅ ማሳሰቢያ / STRICT WARNING
+                </h4>
+                <p className="text-red-700 text-base leading-relaxed font-bold mb-2">
+                  በሆቴሉ ወይም አልጋ ቤት ውስጥ አልጋ የያዙ እንግዶችን ሳይመዘግብ የቀረ እና መረጃውን ሞልቶ ለፖሊስ ያልላከ ሪሴፕሽን ተጠያቂ ይሆናል፤ እንግዳው ለሚፈጥረው ለእያንዳንዱ ነገር ኃላፊነቱን የሚወስድ ይሆናል፡፡
+                </p>
+                <p className="text-red-600 text-xs leading-relaxed font-medium italic opacity-80">
+                  Any receptionist who fails to register guests staying in the hotel or guest house and fails to send the information to the police will be held accountable; they will be responsible for everything the guest creates.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'wanted' && renderWanted()}
           {activeTab === 'reports' && renderReports()}
+          {activeTab === 'manual' && renderManual()}
           {activeTab === 'settings' && renderSettings()}
         </div>
       </main>
