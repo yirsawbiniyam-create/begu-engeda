@@ -23,9 +23,29 @@ import {
   User as UserIcon,
   Camera,
   Upload,
-  Loader2
+  Loader2,
+  ZoomIn,
+  Edit2,
+  Save,
+  Phone,
+  Mail,
+  Map as MapIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 import { 
   collection, 
   query, 
@@ -86,6 +106,46 @@ export const Dashboard: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+
+  // Profile Edit State
+  const [editProfileData, setEditProfileData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    hotelName: '',
+    hotelAddress: { city: '', zone: '' },
+    policeJurisdiction: { city: '', zone: '' }
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setEditProfileData({
+        fullName: profile.fullName || '',
+        phoneNumber: profile.phoneNumber || '',
+        hotelName: profile.hotelName || '',
+        hotelAddress: profile.hotelAddress || { city: '', zone: '' },
+        policeJurisdiction: profile.policeJurisdiction || { city: '', zone: '' }
+      });
+    }
+  }, [profile]);
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    try {
+      setIsUploading(true);
+      await updateDoc(doc(db, 'users', user.uid), {
+        ...editProfileData,
+        updatedAt: new Date().toISOString()
+      });
+      setIsEditingProfile(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update profile");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -220,36 +280,108 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const renderOverview = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          label="Total Reports" 
-          value={reports.length} 
-          icon={FileText} 
-          color="bg-blue-600" 
-        />
-        <StatCard 
-          label="Wanted Matches" 
-          value={reports.filter(r => r.isWantedMatch).length} 
-          icon={ShieldAlert} 
-          color="bg-red-600" 
-        />
-        <StatCard 
-          label="New Reports" 
-          value={notifications.length} 
-          icon={Bell} 
-          color="bg-amber-500" 
-        />
-        <StatCard 
-          label="Wanted List" 
-          value={wantedPersons.length} 
-          icon={Users} 
-          color="bg-slate-800" 
-        />
-      </div>
+  const renderOverview = () => {
+    // Prepare chart data
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return format(d, 'MMM dd');
+    }).reverse();
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    const chartData = last7Days.map(day => ({
+      name: day,
+      reports: reports.filter(r => format(new Date(r.createdAt), 'MMM dd') === day).length
+    }));
+
+    const statusData = [
+      { name: 'Clear', value: reports.filter(r => !r.isWantedMatch).length, color: '#10b981' },
+      { name: 'Wanted', value: reports.filter(r => r.isWantedMatch).length, color: '#ef4444' }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard 
+            label="Total Reports" 
+            value={reports.length} 
+            icon={FileText} 
+            color="bg-blue-600" 
+          />
+          <StatCard 
+            label="Wanted Matches" 
+            value={reports.filter(r => r.isWantedMatch).length} 
+            icon={ShieldAlert} 
+            color="bg-red-600" 
+          />
+          <StatCard 
+            label="Active Wanted" 
+            value={wantedPersons.length} 
+            icon={Users} 
+            color="bg-amber-600" 
+          />
+          <StatCard 
+            label="Unread Alerts" 
+            value={notifications.length} 
+            icon={Bell} 
+            color="bg-indigo-600" 
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-6">Report Trends (Last 7 Days)</h3>
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="reports" fill="#d97706" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-6">Status Distribution</h3>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-3 mt-4">
+              {statusData.map((item) => (
+                <div key={item.name} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }} />
+                    <span className="text-sm text-slate-600">{item.name}</span>
+                  </div>
+                  <span className="text-sm font-bold text-slate-800">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h3 className="text-lg font-bold text-slate-800">Recent Activity / የቅርብ ጊዜ እንቅስቃሴዎች</h3>
           {profile?.role === 'receptionist' && (
@@ -334,6 +466,7 @@ export const Dashboard: React.FC = () => {
       </div>
     </div>
   );
+};
 
   const renderWanted = () => (
     <div className="space-y-6">
@@ -490,8 +623,20 @@ export const Dashboard: React.FC = () => {
   );
 
   const renderSettings = () => (
-    <div className="max-w-2xl space-y-6">
-      <h3 className="text-2xl font-bold text-slate-800">Account Settings / መቼት</h3>
+    <div className="max-w-4xl space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-2xl font-bold text-slate-800">Account Settings / መቼት</h3>
+        <button 
+          onClick={() => setIsEditingProfile(!isEditingProfile)}
+          className={cn(
+            "flex items-center px-4 py-2 rounded-lg font-bold transition",
+            isEditingProfile ? "bg-slate-100 text-slate-600" : "bg-amber-600 text-white shadow-lg shadow-amber-100"
+          )}
+        >
+          {isEditingProfile ? <X className="w-4 h-4 mr-2" /> : <Edit2 className="w-4 h-4 mr-2" />}
+          {isEditingProfile ? "Cancel / ሰርዝ" : "Edit Profile / ቀይር"}
+        </button>
+      </div>
       
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-8">
         <div className="flex items-center">
@@ -507,35 +652,141 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-50">
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Full Name</label>
-            <p className="font-medium text-slate-800">{profile?.fullName}</p>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
-            <p className="font-medium text-slate-800">{profile?.phoneNumber || 'Not provided'}</p>
-          </div>
-          {profile?.role === 'receptionist' ? (
-            <>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Hotel Name</label>
-                <p className="font-medium text-slate-800">{profile?.hotelName}</p>
+        {isEditingProfile ? (
+          <div className="space-y-6 pt-6 border-t border-slate-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Full Name / ሙሉ ስም</label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                    value={editProfileData.fullName}
+                    onChange={(e) => setEditProfileData({...editProfileData, fullName: e.target.value})}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address</label>
-                <p className="font-medium text-slate-800">{profile?.hotelAddress?.city}, {profile?.hotelAddress?.zone}</p>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Phone Number / ስልክ ቁጥር</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="tel" 
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                    value={editProfileData.phoneNumber}
+                    onChange={(e) => setEditProfileData({...editProfileData, phoneNumber: e.target.value})}
+                  />
+                </div>
               </div>
-            </>
-          ) : (
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Jurisdiction</label>
-              <p className="font-medium text-slate-800">
-                {profile?.policeJurisdiction?.city || profile?.policeJurisdiction?.zone || 'Regional'}
-              </p>
+
+              {profile?.role === 'receptionist' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Hotel Name / የሆቴሉ ስም</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text" 
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                        value={editProfileData.hotelName}
+                        onChange={(e) => setEditProfileData({...editProfileData, hotelName: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">City / ከተማ</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                        value={editProfileData.hotelAddress.city}
+                        onChange={(e) => setEditProfileData({
+                          ...editProfileData, 
+                          hotelAddress: { ...editProfileData.hotelAddress, city: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Zone / ዞን</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                        value={editProfileData.hotelAddress.zone}
+                        onChange={(e) => setEditProfileData({
+                          ...editProfileData, 
+                          hotelAddress: { ...editProfileData.hotelAddress, zone: e.target.value }
+                        })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {(profile?.role === 'city_police' || profile?.role === 'zone_police') && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Jurisdiction / የስራ ክልል</label>
+                  <div className="relative">
+                    <MapIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                      value={profile.role === 'city_police' ? editProfileData.policeJurisdiction.city : editProfileData.policeJurisdiction.zone}
+                      onChange={(e) => setEditProfileData({
+                        ...editProfileData, 
+                        policeJurisdiction: { 
+                          ...editProfileData.policeJurisdiction, 
+                          [profile.role === 'city_police' ? 'city' : 'zone']: e.target.value 
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            <div className="flex justify-end pt-4">
+              <button 
+                onClick={handleUpdateProfile}
+                disabled={isUploading}
+                className="flex items-center px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition font-bold shadow-lg shadow-amber-100 disabled:opacity-50"
+              >
+                {isUploading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+                Save Changes / አስቀምጥ
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-50">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Full Name</label>
+              <p className="font-medium text-slate-800">{profile?.fullName}</p>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
+              <p className="font-medium text-slate-800">{profile?.phoneNumber || 'Not provided'}</p>
+            </div>
+            {profile?.role === 'receptionist' ? (
+              <>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Hotel Name</label>
+                  <p className="font-medium text-slate-800">{profile?.hotelName}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address</label>
+                  <p className="font-medium text-slate-800">{profile?.hotelAddress?.city}, {profile?.hotelAddress?.zone}</p>
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Jurisdiction</label>
+                <p className="font-medium text-slate-800">
+                  {profile?.policeJurisdiction?.city || profile?.policeJurisdiction?.zone || 'Regional'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1066,7 +1317,11 @@ export const Dashboard: React.FC = () => {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                      <button className="px-4 py-2 bg-white text-slate-900 rounded-lg font-bold text-sm shadow-xl">
+                      <button 
+                        onClick={() => setEnlargedImage(selectedReport.idCardUrl)}
+                        className="px-4 py-2 bg-white text-slate-900 rounded-lg font-bold text-sm shadow-xl flex items-center"
+                      >
+                        <ZoomIn className="w-4 h-4 mr-2" />
                         View Full Size
                       </button>
                     </div>
@@ -1084,6 +1339,35 @@ export const Dashboard: React.FC = () => {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Image Enlargement Modal */}
+      <AnimatePresence>
+        {enlargedImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-4 md:p-12"
+            onClick={() => setEnlargedImage(null)}
+          >
+            <button 
+              className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+              onClick={() => setEnlargedImage(null)}
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <motion.img 
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              src={enlargedImage} 
+              alt="Enlarged ID" 
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              referrerPolicy="no-referrer"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
