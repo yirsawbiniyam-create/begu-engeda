@@ -183,10 +183,20 @@ export const Dashboard: React.FC = () => {
     } else if (profile.role === 'regional_police') {
       reportsQuery = query(collection(db, 'reports'));
     } else {
-      // Zone/City Police - filter by jurisdiction
-      const isZone = profile.role === 'zone_police';
-      const jurisdictionKey = isZone ? 'hotelAddress.zone' : 'hotelAddress.city';
-      const jurisdictionValue = isZone ? profile.policeJurisdiction.zone : profile.policeJurisdiction.city;
+      // Zone/City/Wereda Police - filter by jurisdiction
+      let jurisdictionKey = '';
+      let jurisdictionValue = '';
+      
+      if (profile.role === 'zone_police') {
+        jurisdictionKey = 'hotelAddress.zone';
+        jurisdictionValue = profile.policeJurisdiction.zone;
+      } else if (profile.role === 'city_police') {
+        jurisdictionKey = 'hotelAddress.city';
+        jurisdictionValue = profile.policeJurisdiction.city;
+      } else if (profile.role === 'wereda_police') {
+        jurisdictionKey = 'hotelAddress.wereda';
+        jurisdictionValue = profile.policeJurisdiction.wereda;
+      }
       
       reportsQuery = query(
         collection(db, 'reports'),

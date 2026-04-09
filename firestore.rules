@@ -11,11 +11,11 @@ service cloud.firestore {
     // Fields:
     //   - fullName: string (required, 1-100 chars)
     //   - email: string (required, valid email)
-    //   - role: string (required, ['receptionist', 'zone_police', 'city_police', 'regional_police'])
+    //   - role: string (required, ['receptionist', 'zone_police', 'city_police', 'wereda_police', 'regional_police'])
     //   - phoneNumber: string (optional, 0-20 chars)
     //   - hotelName: string (optional, 0-100 chars)
     //   - hotelAddress: map (optional, keys: [city, zone, wereda, region])
-    //   - policeJurisdiction: map (optional, keys: [city, zone, region])
+    //   - policeJurisdiction: map (optional, keys: [city, zone, wereda, region])
     //   - createdAt: string (ISO 8601)
     //   - updatedAt: string (ISO 8601)
     //
@@ -73,7 +73,7 @@ service cloud.firestore {
     }
 
     function isPolice() {
-      return isAuthenticated() && getUserData().role in ['zone_police', 'city_police', 'regional_police'];
+      return isAuthenticated() && getUserData().role in ['zone_police', 'city_police', 'wereda_police', 'regional_police'];
     }
 
     function isValidEmail(email) {
@@ -95,7 +95,7 @@ service cloud.firestore {
              data.keys().hasOnly(allowedFields) &&
              data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 100 &&
              isValidEmail(data.email) &&
-             data.role in ['receptionist', 'zone_police', 'city_police', 'regional_police'] &&
+             data.role in ['receptionist', 'zone_police', 'city_police', 'wereda_police', 'regional_police'] &&
              (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 20)) &&
              (!('hotelName' in data) || (data.hotelName is string && data.hotelName.size() <= 100)) &&
              (!('createdAt' in data) || isValidDateString(data.createdAt)) &&
@@ -159,7 +159,8 @@ service cloud.firestore {
         isRegionalPolice() || 
         isOwner(resource.data.receptionistUid) ||
         (getUserData().role == 'zone_police' && resource.data.hotelAddress.zone == getUserData().policeJurisdiction.zone) ||
-        (getUserData().role == 'city_police' && resource.data.hotelAddress.city == getUserData().policeJurisdiction.city)
+        (getUserData().role == 'city_police' && resource.data.hotelAddress.city == getUserData().policeJurisdiction.city) ||
+        (getUserData().role == 'wereda_police' && resource.data.hotelAddress.wereda == getUserData().policeJurisdiction.wereda)
       );
       
       allow create: if isAuthenticated() && 

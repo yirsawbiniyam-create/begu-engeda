@@ -9,10 +9,10 @@
         "email": { "type": "string" },
         "fullName": { "type": "string" },
         "phoneNumber": { "type": "string" },
-        "role": { "type": "string", "enum": ["receptionist", "zone_police", "city_police", "regional_police"] },
+        "role": { "type": "string", "enum": ["receptionist", "zone_police", "city_police", "wereda_police", "regional_police"] },
         "hotelName": { "type": "string", "description": "Only for receptionists" },
         "hotelAddress": { "type": "object", "description": "Region, Zone, City, Wereda" },
-        "policeJurisdiction": { "type": "object", "description": "Region, Zone, City" },
+        "policeJurisdiction": { "type": "object", "description": "Region, Zone, City, Wereda" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]

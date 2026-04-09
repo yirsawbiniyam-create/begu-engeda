@@ -23,7 +23,7 @@ import { auth, db } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 
 type AuthMode = 'login' | 'register' | 'role-select';
-type UserRole = 'receptionist' | 'zone_police' | 'city_police' | 'regional_police';
+type UserRole = 'receptionist' | 'zone_police' | 'city_police' | 'wereda_police' | 'regional_police';
 
 export const AuthPage: React.FC = () => {
   const { user, profile } = useAuth();
@@ -58,7 +58,8 @@ export const AuthPage: React.FC = () => {
   const [jurisdiction, setJurisdiction] = useState({
     region: 'Benishangul-Gumuz',
     zone: '',
-    city: ''
+    city: '',
+    wereda: ''
   });
 
   const handleGoogleLogin = async () => {
@@ -156,6 +157,7 @@ export const AuthPage: React.FC = () => {
 
   const roles = [
     { id: 'receptionist', label: 'Receptionist (ሪሰፕሽን)', icon: Hotel, color: 'bg-blue-500' },
+    { id: 'wereda_police', label: 'Wereda Police (የወረዳ ፖሊስ)', icon: MapPin, color: 'bg-purple-500' },
     { id: 'city_police', label: 'City Police (የከተማ ፖሊስ)', icon: Building2, color: 'bg-green-500' },
     { id: 'zone_police', label: 'Zone Police (የዞን ፖሊስ)', icon: MapPin, color: 'bg-amber-500' },
     { id: 'regional_police', label: 'Regional Police (የክልል ፖሊስ)', icon: Shield, color: 'bg-red-600' },
@@ -350,7 +352,7 @@ export const AuthPage: React.FC = () => {
                       </>
                     )}
 
-                    {(role === 'city_police' || role === 'zone_police') && (
+                    {(role === 'city_police' || role === 'zone_police' || role === 'wereda_police') && (
                       <div className="space-y-3">
                         <p className="text-xs font-bold text-slate-500 uppercase">Jurisdiction / የስራ ክልል</p>
                         <div className="grid grid-cols-1 gap-2">
@@ -372,6 +374,16 @@ export const AuthPage: React.FC = () => {
                               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
                               value={jurisdiction.city}
                               onChange={(e) => setJurisdiction({...jurisdiction, city: e.target.value})}
+                            />
+                          )}
+                          {role === 'wereda_police' && (
+                            <input
+                              type="text"
+                              placeholder="Assigned Wereda / የተመደቡበት ወረዳ"
+                              required
+                              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                              value={jurisdiction.wereda}
+                              onChange={(e) => setJurisdiction({...jurisdiction, wereda: e.target.value})}
                             />
                           )}
                         </div>
