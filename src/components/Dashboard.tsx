@@ -53,6 +53,7 @@ import {
   onSnapshot, 
   addDoc, 
   updateDoc, 
+  deleteDoc,
   doc, 
   orderBy,
   limit,
@@ -487,7 +488,11 @@ export const Dashboard: React.FC = () => {
         <h3 className="text-2xl font-bold text-slate-800">Wanted Persons Database / የተፈላጊዎች መዝገብ</h3>
         {profile?.role === 'regional_police' && (
           <button 
-            onClick={() => setShowWantedModal(true)}
+            onClick={() => {
+              setEditingWantedId(null);
+              setWantedFormData({ fullName: '', description: '', photoUrl: '' });
+              setShowWantedModal(true);
+            }}
             className="flex items-center px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-lg shadow-red-100"
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -531,9 +536,37 @@ export const Dashboard: React.FC = () => {
                   <Calendar className="w-3 h-3 mr-1" />
                   {format(new Date(person.createdAt), 'MMM dd, yyyy')}
                 </div>
-                <button className="text-amber-600 font-bold text-sm hover:underline">
-                  View Details / ዝርዝር ይመልከቱ
-                </button>
+                <div className="flex items-center space-x-2">
+                  {profile?.role === 'regional_police' && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setEditingWantedId(person.id);
+                          setWantedFormData({
+                            fullName: person.fullName,
+                            description: person.description,
+                            photoUrl: person.photoUrl || ''
+                          });
+                          setShowWantedModal(true);
+                        }}
+                        className="p-2 text-slate-400 hover:text-amber-600 transition"
+                        title="Edit / ቀይር"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteWanted(person.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 transition"
+                        title="Delete / አጥፋ"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                  <button className="text-amber-600 font-bold text-sm hover:underline">
+                    View Details / ዝርዝር ይመልከቱ
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -848,6 +881,7 @@ export const Dashboard: React.FC = () => {
   );
 
   const [showWantedModal, setShowWantedModal] = useState(false);
+  const [editingWantedId, setEditingWantedId] = useState<string | null>(null);
   const [wantedFormData, setWantedFormData] = useState({
     fullName: '',
     description: '',
@@ -857,13 +891,30 @@ export const Dashboard: React.FC = () => {
   const handleAddWanted = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'wanted_persons'), {
-        ...wantedFormData,
-        postedBy: user?.uid,
-        createdAt: new Date().toISOString()
-      });
+      if (editingWantedId) {
+        await updateDoc(doc(db, 'wanted_persons', editingWantedId), {
+          ...wantedFormData,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        await addDoc(collection(db, 'wanted_persons'), {
+          ...wantedFormData,
+          postedBy: user?.uid,
+          createdAt: new Date().toISOString()
+        });
+      }
       setShowWantedModal(false);
+      setEditingWantedId(null);
       setWantedFormData({ fullName: '', description: '', photoUrl: '' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteWanted = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this wanted person? / ይህንን ተፈላጊ ሰው ለማጥፋት እርግጠኛ ነዎት?')) return;
+    try {
+      await deleteDoc(doc(db, 'wanted_persons', id));
     } catch (err) {
       console.error(err);
     }
@@ -1187,7 +1238,9 @@ export const Dashboard: React.FC = () => {
               className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
               <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                <h3 className="text-xl font-bold text-slate-800">Add Wanted Person / ተፈላጊ ጨምር</h3>
+                <h3 className="text-xl font-bold text-slate-800">
+                  {editingWantedId ? 'Edit Wanted Person / ተፈላጊን ቀይር' : 'Add Wanted Person / ተፈላጊ ጨምር'}
+                </h3>
                 <button onClick={() => setShowWantedModal(false)} className="p-2 hover:bg-slate-50 rounded-lg">
                   <X className="w-6 h-6 text-slate-400" />
                 </button>
@@ -1301,7 +1354,7 @@ export const Dashboard: React.FC = () => {
                     type="submit"
                     className="px-8 py-2.5 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition"
                   >
-                    Post Wanted / ተፈላጊውን ለጥፍ
+                    {editingWantedId ? 'Update Wanted / አድስ' : 'Post Wanted / ተፈላጊውን ለጥፍ'}
                   </button>
                 </div>
               </form>
