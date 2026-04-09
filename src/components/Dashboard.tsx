@@ -130,6 +130,14 @@ export const Dashboard: React.FC = () => {
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (selectedReport) {
+      document.body.classList.add('report-open');
+    } else {
+      document.body.classList.remove('report-open');
+    }
+  }, [selectedReport]);
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     try {
@@ -966,6 +974,12 @@ export const Dashboard: React.FC = () => {
                 className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 w-64 transition-all"
               />
             </div>
+            <button 
+              onClick={() => window.print()}
+              className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg no-print"
+            >
+              <Printer className="w-6 h-6" />
+            </button>
             <button className="relative p-2 text-slate-500 hover:bg-slate-50 rounded-lg">
               <Bell className="w-6 h-6" />
               {notifications.length > 0 && (
@@ -978,7 +992,7 @@ export const Dashboard: React.FC = () => {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 touch-pan-y">
+        <div id="printable-content" className="flex-1 overflow-y-auto p-4 md:p-8 touch-pan-y">
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'wanted' && renderWanted()}
           {activeTab === 'reports' && renderReports()}
@@ -1300,6 +1314,7 @@ export const Dashboard: React.FC = () => {
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
             <motion.div 
+              id="printable-report"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -1310,8 +1325,11 @@ export const Dashboard: React.FC = () => {
                   <h3 className="text-xl font-bold text-slate-800">Guest Details / የእንግዳ ዝርዝር</h3>
                   <p className="text-xs text-slate-500 font-medium">Report ID: {selectedReport.id}</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-amber-600 transition">
+                <div className="flex items-center space-x-2 no-print">
+                  <button 
+                    onClick={() => window.print()}
+                    className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-amber-600 transition"
+                  >
                     <Printer className="w-5 h-5" />
                   </button>
                   <button className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-amber-600 transition">

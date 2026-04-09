@@ -5,3 +5,43 @@
     @apply overflow-x-hidden;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  /* If report is open, print only that */
+  #printable-report, #printable-report * {
+    visibility: visible;
+  }
+  
+  /* If no report is open, print the main content */
+  body:not(.report-open) #printable-content,
+  body:not(.report-open) #printable-content * {
+    visibility: visible;
+  }
+
+  #printable-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    overflow: visible !important;
+    max-height: none !important;
+    background: white;
+  }
+
+  #printable-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
