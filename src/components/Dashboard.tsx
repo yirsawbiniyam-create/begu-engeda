@@ -994,14 +994,18 @@ export const Dashboard: React.FC = () => {
               <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">05</span>
               አጠቃቀሙ (Usage)
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <h5 className="font-bold text-slate-800 mb-2">ሆቴሎች</h5>
-                <p className="text-sm text-slate-600">የእንግዳውን ስም፣ ስልክ፣ አድራሻ እና የመታወቂያ ፎቶ በሲስተሙ ላይ ይመዘግባሉ።</p>
+                <p className="text-sm text-slate-600">የእንግዳውን ስም፣ ስልክ፣ አድራሻ (ወረዳን ጨምሮ) እና የመታወቂያ ፎቶ በሲስተሙ ላይ ይመዘግባሉ።</p>
               </div>
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <h5 className="font-bold text-slate-800 mb-2">ፖሊስ</h5>
-                <p className="text-sm text-slate-600">በየደረጃው (ከተማ፣ ዞን፣ ክልል) ሆኖ ወደ ክልሉ የገቡ እንግዶችን መረጃ በቀጥታ ይከታተላል።</p>
+                <h5 className="font-bold text-slate-800 mb-2">ወረዳ ፖሊስ</h5>
+                <p className="text-sm text-slate-600">በወረዳው ስር ያሉ ሆቴሎች የላኩትን የእንግዳ መረጃ በቀጥታ ይከታተላል።</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <h5 className="font-bold text-slate-800 mb-2">ክልል/ዞን ፖሊስ</h5>
+                <p className="text-sm text-slate-600">በየደረጃው ሆኖ ወደ ክልሉ/ዞኑ የገቡ እንግዶችን መረጃ በበላይነት ይከታተላል።</p>
               </div>
             </div>
           </section>
@@ -1009,6 +1013,27 @@ export const Dashboard: React.FC = () => {
           <section className="space-y-3">
             <h4 className="text-xl font-bold text-slate-900 flex items-center">
               <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">06</span>
+              አሰራሩ (Procedure)
+            </h4>
+            <div className="space-y-4 text-slate-600">
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center mr-3 shrink-0 text-xs">1</div>
+                <p>እንግዳው ሆቴል ሲደርስ ሪሴፕሽኑ የወረዳ አድራሻን ጨምሮ መረጃውን በሲስተሙ ላይ ይሞላል።</p>
+              </div>
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center mr-3 shrink-0 text-xs">2</div>
+                <p>ሲስተሙ መረጃውን ከተፈላጊዎች መዝገብ ጋር በራሱ ያመሳክራል።</p>
+              </div>
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center mr-3 shrink-0 text-xs">3</div>
+                <p>መረጃው በሞላው አድራሻ (ወረዳ) መሰረት ለሚመለከተው የወረዳ ፖሊስ እና ለበላይ አካላት ወዲያውኑ ይደርሳል።</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">07</span>
               ጥቅሙ (Benefits)
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1028,16 +1053,28 @@ export const Dashboard: React.FC = () => {
 
           <section className="space-y-3">
             <h4 className="text-xl font-bold text-slate-900 flex items-center">
-              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">07</span>
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">08</span>
               የሚያስፈልገው (Requirements)
             </h4>
             <div className="flex flex-wrap gap-3">
-              {['ስማርት ስልክ', 'ኮምፒውተር', 'ኢንተርኔት', 'የመረጃ ባለሙያ'].map(tag => (
+              {['ስማርት ስልክ', 'ኮምፒውተር', 'ኢንተርኔት', 'የመረጃ ባለሙያ', 'የወረዳ ፖሊስ ኃይል'].map(tag => (
                 <span key={tag} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-full text-sm font-medium">
                   {tag}
                 </span>
               ))}
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center mr-3 text-sm">09</span>
+              የሚመለከታቸው አካላት (Stakeholders)
+            </h4>
+            <ul className="list-disc list-inside text-slate-600 space-y-2 ml-4">
+              <li>የቤንሻንጉል ጉሙዝ ክልል ፖሊስ ኮሚሽን</li>
+              <li>የዞን፣ የከተማ እና የወረዳ ፖሊስ መምሪያዎች</li>
+              <li>በክልሉ ያሉ ሆቴሎች፣ ሎጆችና የእንግዳ ማረፊያዎች</li>
+            </ul>
           </section>
         </div>
       </div>
