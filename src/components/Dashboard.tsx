@@ -138,79 +138,6 @@ export const Dashboard: React.FC = () => {
     }
   }, [selectedReport]);
 
-  const [isRestoring, setIsRestoring] = useState(false);
-
-  const handleBackup = async () => {
-    try {
-      const backupData = {
-        reports,
-        wantedPersons,
-        backupDate: new Date().toISOString(),
-        version: '1.0'
-      };
-      
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `begu_engeda_backup_${format(new Date(), 'yyyy-MM-dd')}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Backup failed:', err);
-      alert('Backup failed / ባክአፕ አልተሳካም');
-    }
-  };
-
-  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        setIsRestoring(true);
-        const content = event.target?.result as string;
-        const data = JSON.parse(content);
-
-        if (!data.reports || !data.wantedPersons) {
-          throw new Error('Invalid backup file format');
-        }
-
-        // Restore reports
-        for (const report of data.reports) {
-          const { id, ...reportData } = report;
-          await addDoc(collection(db, 'reports'), {
-            ...reportData,
-            restoredAt: new Date().toISOString()
-          });
-        }
-
-        // Restore wanted persons (only if regional police)
-        if (profile?.role === 'regional_police') {
-          for (const person of data.wantedPersons) {
-            const { id, ...personData } = person;
-            await addDoc(collection(db, 'wanted_persons'), {
-              ...personData,
-              restoredAt: new Date().toISOString()
-            });
-          }
-        }
-
-        alert('Restore completed successfully / ሪስቶር በተሳካ ሁኔታ ተጠናቋል');
-      } catch (err) {
-        console.error('Restore failed:', err);
-        alert('Restore failed: Invalid file or permission error / ሪስቶር አልተሳካም፡ የተሳሳተ ፋይል ወይም የፈቃድ ችግር');
-      } finally {
-        setIsRestoring(false);
-        e.target.value = ''; // Reset input
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const handleUpdateProfile = async () => {
     if (!user) return;
     try {
@@ -871,29 +798,7 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-end pt-4 space-x-4">
-              {profile?.role === 'regional_police' && (
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={handleBackup}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold text-sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Backup / ባክአፕ
-                  </button>
-                  <label className="flex items-center px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition font-bold text-sm cursor-pointer">
-                    {isRestoring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                    Restore / ሪስቶር
-                    <input 
-                      type="file" 
-                      accept=".json" 
-                      className="hidden" 
-                      onChange={handleRestore}
-                      disabled={isRestoring}
-                    />
-                  </label>
-                </div>
-              )}
+            <div className="flex justify-end pt-4">
               <button 
                 onClick={handleUpdateProfile}
                 disabled={isUploading}
