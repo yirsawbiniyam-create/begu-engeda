@@ -171,6 +171,8 @@ export const Dashboard: React.FC = () => {
     idCardUrl: ''
   });
 
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
   useEffect(() => {
     if (!profile) return;
 
@@ -214,10 +216,10 @@ export const Dashboard: React.FC = () => {
 
       setReports(sortedData);
       
-      // Real-time notifications for police
+      // Real-time notifications for police (only for wanted matches)
       if (profile.role !== 'receptionist') {
-        const unread = sortedData.filter((r: any) => !r.isReadByPolice);
-        setNotifications(unread);
+        const unreadWanted = sortedData.filter((r: any) => !r.isReadByPolice && r.isWantedMatch);
+        setNotifications(unreadWanted);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'reports');
@@ -284,6 +286,8 @@ export const Dashboard: React.FC = () => {
       });
 
       setShowReportModal(false);
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 5000);
       setFormData({
         guestName: '',
         phoneNumber: '',
@@ -333,28 +337,35 @@ export const Dashboard: React.FC = () => {
             icon={FileText} 
             color="bg-blue-600" 
           />
-          <StatCard 
-            label="Wanted Matches / የተገኙ ተፈላጊዎች" 
-            value={reports.filter(r => r.isWantedMatch).length} 
-            icon={ShieldAlert} 
-            color="bg-red-600" 
-          />
-          <StatCard 
-            label="Active Wanted / ንቁ ተፈላጊዎች" 
-            value={wantedPersons.length} 
-            icon={Users} 
-            color="bg-amber-600" 
-          />
-          <StatCard 
-            label="Unread Alerts / ያልተነበቡ ማስጠንቀቂያዎች" 
-            value={notifications.length} 
-            icon={Bell} 
-            color="bg-indigo-600" 
-          />
+          {profile?.role !== 'receptionist' && (
+            <>
+              <StatCard 
+                label="Wanted Matches / የተገኙ ተፈላጊዎች" 
+                value={reports.filter(r => r.isWantedMatch).length} 
+                icon={ShieldAlert} 
+                color="bg-red-600" 
+              />
+              <StatCard 
+                label="Active Wanted / ንቁ ተፈላጊዎች" 
+                value={wantedPersons.length} 
+                icon={Users} 
+                color="bg-amber-600" 
+              />
+              <StatCard 
+                label="Unread Alerts / ያልተነበቡ ማስጠንቀቂያዎች" 
+                value={notifications.length} 
+                icon={Bell} 
+                color="bg-indigo-600" 
+              />
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className={cn(
+            "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm",
+            profile?.role === 'receptionist' ? "lg:col-span-3" : "lg:col-span-2"
+          )}>
             <h3 className="text-lg font-bold text-slate-800 mb-6">Report Trends (Last 7 Days) / የሪፖርት ሁኔታ (ያለፉት 7 ቀናት)</h3>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -371,40 +382,42 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 mb-6">Status Distribution / የሁኔታዎች ስርጭት</h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-3 mt-4">
-              {statusData.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm text-slate-600">{item.name}</span>
+          {profile?.role !== 'receptionist' && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-800 mb-6">Status Distribution / የሁኔታዎች ስርጭት</h3>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-3 mt-4">
+                {statusData.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }} />
+                      <span className="text-sm text-slate-600">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-800">{item.value}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-800">{item.value}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -438,7 +451,7 @@ export const Dashboard: React.FC = () => {
                       <div className="flex items-center">
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-white",
-                          report.isWantedMatch ? "bg-red-500" : "bg-slate-200 text-slate-600"
+                          (report.isWantedMatch && profile?.role !== 'receptionist') ? "bg-red-500" : "bg-slate-200 text-slate-600"
                         )}>
                           {report.guestName[0]}
                         </div>
@@ -465,7 +478,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {report.isWantedMatch ? (
+                      {(report.isWantedMatch && profile?.role !== 'receptionist') ? (
                         <span className="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded-full uppercase animate-pulse">
                           Wanted Match / ተፈላጊ
                         </span>
@@ -663,20 +676,20 @@ export const Dashboard: React.FC = () => {
             <tbody className="divide-y divide-slate-50">
               {reports.map((report) => (
                 <tr key={report.id} className="hover:bg-slate-50 transition">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-white",
-                        report.isWantedMatch ? "bg-red-500" : "bg-slate-200 text-slate-600"
-                      )}>
-                        {report.guestName[0]}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-white",
+                          (report.isWantedMatch && profile?.role !== 'receptionist') ? "bg-red-500" : "bg-slate-200 text-slate-600"
+                        )}>
+                          {report.guestName[0]}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{report.guestName}</p>
+                          <p className="text-xs text-slate-500">{report.phoneNumber}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{report.guestName}</p>
-                        <p className="text-xs text-slate-500">{report.phoneNumber}</p>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
                     <p className="text-xs text-slate-400">
@@ -690,7 +703,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {report.isWantedMatch ? (
+                    {(report.isWantedMatch && profile?.role !== 'receptionist') ? (
                       <span className="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded-full uppercase animate-pulse">
                         Wanted / ተፈላጊ
                       </span>
@@ -1164,12 +1177,14 @@ export const Dashboard: React.FC = () => {
                 active={activeTab === 'reports'} 
                 onClick={() => setActiveTab('reports')} 
               />
-              <SidebarItem 
-                icon={Users} 
-                label="Wanted List / ተፈላጊዎች" 
-                active={activeTab === 'wanted'} 
-                onClick={() => setActiveTab('wanted')} 
-              />
+              {profile?.role !== 'receptionist' && (
+                <SidebarItem 
+                  icon={Users} 
+                  label="Wanted List / ተፈላጊዎች" 
+                  active={activeTab === 'wanted'} 
+                  onClick={() => setActiveTab('wanted')} 
+                />
+              )}
               <SidebarItem 
                 icon={BookOpen} 
                 label="Manual / መመሪያ" 
@@ -1250,6 +1265,26 @@ export const Dashboard: React.FC = () => {
         </header>
 
         {/* Content Area */}
+        {/* Success Toast */}
+        <AnimatePresence>
+          {showSuccessToast && (
+            <motion.div 
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center px-6 py-4 bg-green-600 text-white rounded-2xl shadow-2xl space-x-3"
+            >
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                <Check className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-bold text-sm">እንግዳው በተሳካ ሁኔታ ተመዝግቧል!</p>
+                <p className="text-[10px] opacity-80 uppercase font-bold tracking-wider">Guest registered successfully!</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div id="printable-content" className="flex-1 overflow-y-auto p-4 md:p-8 touch-pan-y">
           {/* Strict Warning Message */}
           <div className="mb-8 bg-red-50 border-l-4 border-red-600 p-5 rounded-r-2xl shadow-sm animate-pulse">
@@ -1682,7 +1717,7 @@ export const Dashboard: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                  {selectedReport.isWantedMatch && (
+                  {selectedReport.isWantedMatch && profile?.role !== 'receptionist' && (
                     <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start">
                       <ShieldAlert className="w-6 h-6 text-red-600 mr-3 shrink-0" />
                       <div>
