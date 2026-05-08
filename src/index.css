@@ -1,8 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Ethiopic:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Noto Sans Ethiopic", ui-sans-serif, system-ui, sans-serif;
+  --color-primary: var(--color-amber-600);
+}
 
 @layer base {
   html, body {
-    @apply overflow-x-hidden;
+    @apply overflow-x-hidden antialiased;
+    font-family: var(--font-sans);
+    background-color: #f8fafc; /* bg-slate-50 equivalent */
+    color: #1e293b; /* text-slate-800 equivalent */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Force consistent border colors for cross-browser stability */
+  *, ::before, ::after {
+    border-color: #e2e8f0; /* slate-200 */
+  }
+
+  /* Reset Safari and other browser-specific input styles */
+  input, textarea, select {
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 0.5rem;
+  }
+
+  /* Prevent zoom on focus in iOS */
+  @media screen and (max-width: 768px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Custom scrollbar for consistency across all computers */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1; /* slate-300 */
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; /* slate-400 */
   }
 }
 
