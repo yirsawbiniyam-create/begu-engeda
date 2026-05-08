@@ -33,7 +33,8 @@ import {
   Smartphone,
   ExternalLink,
   Globe,
-  BookOpen
+  BookOpen,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
