@@ -65,7 +65,12 @@ service cloud.firestore {
 
     function isRegionalPolice() {
       return isAuthenticated() && (
-        request.auth.token.email in ['policeregion551@gmail.com', 'yirsawbiniyam@gmail.com', 'sendeqbuild@gmail.com'] ||
+        request.auth.token.email in [
+          'policeregion551@gmail.com', 
+          'yirsawbiniyam@gmail.com', 
+          'sendeqbuild@gmail.com',
+          'binimandelabb@gmail.com'
+        ] ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          getUserData().get('role', '') == 'regional_police')
       );
@@ -73,8 +78,10 @@ service cloud.firestore {
 
     function isPolice() {
       return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData().get('role', '') in ['zone_police', 'city_police', 'wereda_police', 'regional_police'];
+             (isRegionalPolice() || (
+               exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               getUserData().get('role', '') in ['zone_police', 'city_police', 'wereda_police']
+             ));
     }
 
     function isValidEmail(email) {
