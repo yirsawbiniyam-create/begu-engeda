@@ -115,6 +115,7 @@ export const Dashboard: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [policeUsers, setPoliceUsers] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
   const [userFormData, setUserFormData] = useState({
     fullName: '',
@@ -246,8 +247,10 @@ export const Dashboard: React.FC = () => {
       handleFirestoreError(error, OperationType.LIST, 'wanted_persons');
     });
 
-    const unsubUsers = onSnapshot(query(collection(db, 'users'), where('role', 'in', ['zone_police', 'city_police', 'wereda_police'])), (snapshot) => {
-      setPoliceUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const unsubUsers = onSnapshot(query(collection(db, 'users')), (snapshot) => {
+      const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllUsers(usersData);
+      setPoliceUsers(usersData.filter((u: any) => ['zone_police', 'city_police', 'wereda_police'].includes(u.role)));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'users');
     });
@@ -570,6 +573,177 @@ export const Dashboard: React.FC = () => {
               <ExternalLink className="w-4 h-4 ml-2" />
             </a>
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderUserManagement = () => {
+    const receptionists = allUsers.filter(u => u.role === 'receptionist');
+    const police = allUsers.filter(u => ['zone_police', 'city_police', 'wereda_police'].includes(u.role));
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-2xl font-bold text-slate-800">User Management / ተጠቃሚዎች መቆጣጠሪያ</h3>
+          <button 
+            onClick={() => setShowUserModal(true)}
+            className="flex items-center px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition font-bold shadow-lg shadow-amber-100"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Pre-register Police / ፖሊስ አስቀድመህ መዝግብ
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Police Users */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-50 bg-slate-50/50">
+              <h4 className="font-bold text-slate-800 flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-amber-600" />
+                Police Officers / የፖሊስ አባላት ({police.length})
+              </h4>
+            </div>
+            <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
+              {police.map((u: any) => (
+                <div key={u.id} className="p-4 hover:bg-slate-50 transition flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
+                      <UserIcon className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800 text-sm">{u.fullName}</p>
+                      <p className="text-xs text-slate-500 uppercase font-bold">{u.role?.replace('_', ' ')}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {u.policeJurisdiction?.zone} {u.policeJurisdiction?.city || u.policeJurisdiction?.wereda}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-700">{u.email}</p>
+                    <p className="text-[10px] text-slate-400">{u.phoneNumber}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Receptionists */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-50 bg-slate-50/50">
+              <h4 className="font-bold text-slate-800 flex items-center">
+                <Building2 className="w-5 h-5 mr-2 text-amber-600" />
+                Hotel Receptionists / የሆቴል ሪሴፕሽኖች ({receptionists.length})
+              </h4>
+            </div>
+            <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
+              {receptionists.map((u: any) => (
+                <div key={u.id} className="p-4 hover:bg-slate-50 transition flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      <Building2 className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800 text-sm">{u.hotelName || u.fullName}</p>
+                      <p className="text-xs text-slate-500">{u.fullName}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {u.hotelAddress?.zone}, {u.hotelAddress?.city || u.hotelAddress?.wereda}{u.hotelAddress?.kebele ? `, Kebele ${u.hotelAddress.kebele}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-700">{u.email}</p>
+                    <p className="text-[10px] text-slate-400">{u.phoneNumber}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderHotelDirectory = () => {
+    const hotels = allUsers.filter(u => u.role === 'receptionist');
+    
+    // Group hotels by Zone -> City/Wereda
+    const groupedHotels: any = {};
+    hotels.forEach(hotel => {
+      const zone = hotel.hotelAddress?.zone || 'Unknown Zone';
+      const city = hotel.hotelAddress?.city || hotel.hotelAddress?.wereda || 'Unknown Area';
+      
+      if (!groupedHotels[zone]) groupedHotels[zone] = {};
+      if (!groupedHotels[zone][city]) groupedHotels[zone][city] = [];
+      
+      groupedHotels[zone][city].push(hotel);
+    });
+
+    return (
+      <div className="space-y-6">
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-slate-800">Establishment Directory / የአልጋ ቤቶች ዝርዝር</h3>
+          <p className="text-slate-500">View and browse hotels organized by location / በየአድራሻቸው የተመደቡ ሆቴሎች በፎልደር መልክ</p>
+        </div>
+
+        <div className="space-y-4">
+          {Object.keys(groupedHotels).sort().map(zone => (
+            <div key={zone} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center mr-3">
+                    <MapPin className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-slate-800">Zone: {zone} / ዞን: {zone}</h4>
+                </div>
+                <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
+                  {(Object.values(groupedHotels[zone]) as any[]).reduce((acc: number, curr: any[]) => acc + curr.length, 0)} Establishments
+                </span>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.keys(groupedHotels[zone]).sort().map(city => (
+                  <div key={city} className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 hover:border-amber-200 transition-all group">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/50">
+                      <div className="flex items-center">
+                        <BookOpen className="w-4 h-4 text-amber-600 mr-2" />
+                        <span className="font-bold text-slate-800">{city}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">
+                        {groupedHotels[zone][city].length} Hotels
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 scrollbar-hide">
+                      {groupedHotels[zone][city].map((hotel: any) => (
+                        <div key={hotel.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-white transition shadow-sm border border-transparent hover:border-amber-100">
+                          <div className="flex items-center min-w-0">
+                            <Building2 className="w-3 h-3 text-slate-400 mr-2 shrink-0" />
+                            <span className="text-xs font-medium text-slate-700 truncate">{hotel.hotelName}</span>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              // Filter reports for this hotel and show them? Or just view hotel?
+                              // For now just show activeTab switch maybe?
+                              alert(`Hotel: ${hotel.hotelName}\nRegistered to: ${hotel.fullName}\nPhone: ${hotel.phoneNumber}`);
+                            }}
+                            className="p-1 hover:text-amber-600 transition"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          
+          {Object.keys(groupedHotels).length === 0 && (
+            <div className="bg-white p-12 text-center rounded-2xl border border-slate-100">
+              <MapIcon className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+              <p className="text-slate-500 font-medium">No districts found / ምንም የተመዘገቡ ወረዳዎች ወይም ከተማዎች የሉም</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1218,215 +1392,8 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const renderUserManagement = () => (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-2xl font-bold text-slate-800">User Management / ተጠቃሚዎች ማስተዳደሪያ</h3>
-          <p className="text-slate-500">Register and manage police officers / ፖሊሶችን ይመዝግቡ እና ያስተዳድሩ</p>
-        </div>
-        <button 
-          onClick={() => setShowUserModal(true)}
-          className="flex items-center justify-center px-6 py-3 bg-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Register Police / ፖሊስ መዝግብ
-        </button>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Name / ስም</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role / ሚና</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Jurisdiction / የስራ ክልል</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Contact / ግንኙነት</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {policeUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                    No police users found / ምንም ተጠቃሚ አልተገኘም
-                  </td>
-                </tr>
-              ) : (
-                policeUsers.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mr-3">
-                          <UserIcon className="w-6 h-6 text-slate-400" />
-                        </div>
-                        <span className="font-bold text-slate-700">{p.fullName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full uppercase">
-                        {p.role?.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {p.role === 'zone_police' && p.policeJurisdiction?.zone}
-                      {p.role === 'city_police' && p.policeJurisdiction?.city}
-                      {p.role === 'wereda_police' && p.policeJurisdiction?.wereda}
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-slate-700">{p.email}</p>
-                      <p className="text-xs text-slate-400">{p.phoneNumber}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => deleteDoc(doc(db, 'users', p.id))}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* User Registration Modal */}
-      <AnimatePresence>
-        {showUserModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowUserModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-slate-800">Register Police / ፖሊስ መመዝገቢያ</h3>
-                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-slate-50 rounded-lg">
-                  <X className="w-6 h-6 text-slate-400" />
-                </button>
-              </div>
-              <form onSubmit={handleRegisterPolice} className="p-6 space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Full Name / ሙሉ ስም</label>
-                    <input 
-                      required
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                      value={userFormData.fullName}
-                      onChange={(e) => setUserFormData({...userFormData, fullName: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase">Phone / ስልክ</label>
-                      <input 
-                        required
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                        value={userFormData.phoneNumber}
-                        onChange={(e) => setUserFormData({...userFormData, phoneNumber: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 uppercase">Role / ሚና</label>
-                      <select 
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-                        value={userFormData.role}
-                        onChange={(e) => setUserFormData({...userFormData, role: e.target.value as any})}
-                      >
-                        <option value="wereda_police">Wereda Police (የወረዳ ፖሊስ)</option>
-                        <option value="city_police">City Police (የከተማ ፖሊስ)</option>
-                        <option value="zone_police">Zone Police (የዞን ፖሊስ)</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">
-                      {userFormData.role === 'wereda_police' ? 'Wereda / ወረዳ' : 
-                       userFormData.role === 'city_police' ? 'City / ከተማ' : 'Zone / ዞን'}
-                    </label>
-                    <input 
-                      required
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                      value={userFormData.role === 'wereda_police' ? userFormData.jurisdiction.wereda : 
-                             userFormData.role === 'city_police' ? userFormData.jurisdiction.city : userFormData.jurisdiction.zone}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const jur = { ...userFormData.jurisdiction };
-                        if (userFormData.role === 'wereda_police') jur.wereda = val;
-                        else if (userFormData.role === 'city_police') jur.city = val;
-                        else jur.zone = val;
-                        setUserFormData({...userFormData, jurisdiction: jur});
-                      }}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Kebele / ቀበሌ (Optional)</label>
-                    <input 
-                      type="text"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                      value={userFormData.jurisdiction.kebele}
-                      onChange={(e) => setUserFormData({
-                        ...userFormData, 
-                        jurisdiction: { ...userFormData.jurisdiction, kebele: e.target.value }
-                      })}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Email / ኢሜል</label>
-                    <input 
-                      type="email"
-                      required
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                      value={userFormData.email}
-                      onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Password / የይለፍ ቃል</label>
-                    <input 
-                      type="text"
-                      required
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-                      value={userFormData.password}
-                      onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
-                    />
-                    <p className="text-[10px] text-slate-400 italic">This password will be used by the officer to log in. / ይህ የይለፍ ቃል ፖሊሱ ለመግባት ይጠቀምበታል።</p>
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <button 
-                    type="submit"
-                    disabled={isUploading}
-                    className="w-full py-3 bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all flex items-center justify-center"
-                  >
-                    {isUploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-                    Register & Save / መዝግብና አስቀምጥ
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-
   return (
+
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
       <AnimatePresence>
@@ -1470,12 +1437,20 @@ export const Dashboard: React.FC = () => {
                 onClick={() => setActiveTab('reports')} 
               />
               {profile?.role === 'regional_police' && (
-                <SidebarItem 
-                  icon={Users} 
-                  label="User Management / ተጠቃሚዎች" 
-                  active={activeTab === 'users'} 
-                  onClick={() => setActiveTab('users')} 
-                />
+                <>
+                  <SidebarItem 
+                    icon={Users} 
+                    label="User Management / ተጠቃሚዎች" 
+                    active={activeTab === 'users'} 
+                    onClick={() => setActiveTab('users')} 
+                  />
+                  <SidebarItem 
+                    icon={Building2} 
+                    label="Hotel Directory / ሆቴሎች" 
+                    active={activeTab === 'hotels'} 
+                    onClick={() => setActiveTab('hotels')} 
+                  />
+                </>
               )}
               {profile?.role !== 'receptionist' && (
                 <SidebarItem 
@@ -1606,6 +1581,7 @@ export const Dashboard: React.FC = () => {
 
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'users' && renderUserManagement()}
+          {activeTab === 'hotels' && renderHotelDirectory()}
           {activeTab === 'wanted' && renderWanted()}
           {activeTab === 'reports' && renderReports()}
           {activeTab === 'manual' && renderManual()}
