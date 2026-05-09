@@ -122,7 +122,7 @@ export const Dashboard: React.FC = () => {
     email: '',
     password: '',
     role: 'wereda_police',
-    jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz' }
+    jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz', kebele: '' }
   });
 
   // Profile Edit State
@@ -1188,7 +1188,8 @@ export const Dashboard: React.FC = () => {
         region: 'Benishangul-Gumuz',
         zone: userFormData.role === 'zone_police' ? userFormData.jurisdiction.zone : '',
         city: userFormData.role === 'city_police' ? userFormData.jurisdiction.city : '',
-        wereda: userFormData.role === 'wereda_police' ? userFormData.jurisdiction.wereda : ''
+        wereda: userFormData.role === 'wereda_police' ? userFormData.jurisdiction.wereda : '',
+        kebele: userFormData.jurisdiction.kebele || ''
       };
 
       await addDoc(collection(db, 'pre_registered_users'), {
@@ -1206,7 +1207,7 @@ export const Dashboard: React.FC = () => {
         email: '',
         password: '',
         role: 'wereda_police',
-        jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz' }
+        jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz', kebele: '' }
       });
       alert("Police user pre-registered! Tell them to go to 'Register', enter their email, and the system will handle the rest. / ፖሊሱ ተመዝግቧል! ወደ 'Register' በመሄድ ኢሜላቸውን እንዲሞሉ ይንገሯቸው።");
     } catch (err) {
@@ -1369,6 +1370,19 @@ export const Dashboard: React.FC = () => {
                         else jur.zone = val;
                         setUserFormData({...userFormData, jurisdiction: jur});
                       }}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Kebele / ቀበሌ (Optional)</label>
+                    <input 
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                      value={userFormData.jurisdiction.kebele}
+                      onChange={(e) => setUserFormData({
+                        ...userFormData, 
+                        jurisdiction: { ...userFormData.jurisdiction, kebele: e.target.value }
+                      })}
                     />
                   </div>
 
