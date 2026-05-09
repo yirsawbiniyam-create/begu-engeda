@@ -64,16 +64,17 @@ service cloud.firestore {
     }
 
     function isRegionalPolice() {
-      let data = getUserData();
       return isAuthenticated() && (
-        data.role == 'regional_police' || 
-        (request.auth.token.email == "policeregion551@gmail.com" && request.auth.token.email_verified == true) ||
-        (request.auth.token.email == "yirsawbiniyam@gmail.com" && request.auth.token.email_verified == true)
+        request.auth.token.email in ['policeregion551@gmail.com', 'yirsawbiniyam@gmail.com', 'sendeqbuild@gmail.com'] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         getUserData().get('role', '') == 'regional_police')
       );
     }
 
     function isPolice() {
-      return isAuthenticated() && getUserData().role in ['zone_police', 'city_police', 'wereda_police', 'regional_police'];
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().get('role', '') in ['zone_police', 'city_police', 'wereda_police', 'regional_police'];
     }
 
     function isValidEmail(email) {
@@ -136,20 +137,15 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // PII Protection: Only owners and regional police can read full profiles
-      // Others can only read if they are authenticated (for basic lookups if needed, 
-      // but we should ideally restrict this further if possible).
-      // Given the app needs to show hotel info in reports, we allow read if authenticated,
-      // but we must be careful.
       allow read: if isAuthenticated() && (isOwner(userId) || isPolice());
       
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
-                    request.resource.data.role != 'regional_police'; // Users can't self-promote to regional police
+                    request.resource.data.role != 'regional_police';
       
       allow update: if isAuthenticated() && (
         (isOwner(userId) && 
          isValidUser(request.resource.data) && 
-         request.resource.data.role == resource.data.role) || // Owner can't change their own role
+         request.resource.data.role == resource.data.role) || 
         isRegionalPolice()
       );
     }
@@ -157,14 +153,17 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow read: if isAuthenticated() && (
         isRegionalPolice() || 
-        isOwner(resource.data.receptionistUid) ||
-        (getUserData().role == 'zone_police' && resource.data.hotelAddress.zone == getUserData().policeJurisdiction.zone) ||
-        (getUserData().role == 'city_police' && resource.data.hotelAddress.city == getUserData().policeJurisdiction.city) ||
-        (getUserData().role == 'wereda_police' && resource.data.hotelAddress.wereda == getUserData().policeJurisdiction.wereda)
+        resource.data.receptionistUid == request.auth.uid ||
+        (isPolice() && (
+          (getUserData().role == 'zone_police' && resource.data.hotelAddress.zone == getUserData().policeJurisdiction.zone) ||
+          (getUserData().role == 'city_police' && resource.data.hotelAddress.city == getUserData().policeJurisdiction.city) ||
+          (getUserData().role == 'wereda_police' && resource.data.hotelAddress.wereda == getUserData().policeJurisdiction.wereda)
+        ))
       );
       
       allow create: if isAuthenticated() && 
-                    getUserData().role == 'receptionist' && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    getUserData().get('role', '') == 'receptionist' && 
                     isValidReport(request.resource.data);
       
       allow update: if isAuthenticated() && (
@@ -179,6 +178,12 @@ service cloud.firestore {
     match /wanted_persons/{personId} {
       allow read: if isAuthenticated();
       allow write: if isRegionalPolice();
+    }
+
+    match /pre_registered_users/{docId} {
+      allow list: if true; 
+      allow read, write: if isRegionalPolice();
+      allow delete: if true; 
     }
 
     // ===============================================================
