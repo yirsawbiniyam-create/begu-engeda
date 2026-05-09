@@ -10,7 +10,8 @@ import {
   Building2,
   ChevronRight,
   Globe,
-  Check
+  Check,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -22,6 +23,7 @@ import {
 import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
+import { cn } from '../lib/utils';
 
 type AuthMode = 'login' | 'register' | 'role-select';
 type UserRole = 'receptionist' | 'zone_police' | 'city_police' | 'wereda_police' | 'regional_police';
@@ -77,7 +79,8 @@ export const AuthPage: React.FC = () => {
     region: 'Benishangul-Gumuz',
     zone: '',
     city: '',
-    wereda: ''
+    wereda: '',
+    kebele: ''
   });
 
   // Police specific
@@ -272,9 +275,17 @@ export const AuthPage: React.FC = () => {
                 </div>
 
                 {isPreRegistered && (
-                  <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-lg flex items-center">
-                    <Check className="w-4 h-4 mr-2" />
-                    Account details found! Role and Jurisdiction set by Admin. / ዝርዝር መረጃ ተገኝቷል! ሚና እና የስራ ክልል በአድሚን ተዘጋጅቷል።
+                  <div className="p-4 bg-green-50 border-2 border-green-200 text-green-700 rounded-xl flex items-start space-x-3 mb-6">
+                    <div className="mt-1 bg-green-100 p-1 rounded-full">
+                      <Check className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">Account details found! / መረጃዎ ተገኝቷል!</p>
+                      <p className="text-[11px] opacity-80 leading-tight mt-0.5">
+                        Your role as {role?.replace('_', ' ')} for {jurisdiction.zone || jurisdiction.city || jurisdiction.wereda} is already set. Just set your password to activate. / 
+                        ለ{jurisdiction.zone || jurisdiction.city || jurisdiction.wereda} ያለዎ የ{role?.replace('_', ' ')} ሚና ተዘጋጅቷል። ለመቀጠል የይለፍ ቃልዎን ያስገቡ።
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -286,32 +297,34 @@ export const AuthPage: React.FC = () => {
 
                 {mode === 'register' && (
                   <>
-                    <div className="relative">
-                      <UserIcon className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Full Name / ሙሉ ስም"
-                        required
-                        disabled={isPreRegistered}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                      />
-                    </div>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-                      <input
-                        type="tel"
-                        placeholder="Phone Number / ስልክ ቁጥር"
-                        required
-                        disabled={isPreRegistered}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </div>
+                    {!isPreRegistered && (
+                      <>
+                        <div className="relative">
+                          <UserIcon className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Full Name / ሙሉ ስም"
+                            required
+                            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                          />
+                        </div>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                          <input
+                            type="tel"
+                            placeholder="Phone Number / ስልክ ቁጥር"
+                            required
+                            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
 
-                    {role === 'receptionist' && (
+                    {role === 'receptionist' && !isPreRegistered && (
                       <>
                         <div className="relative">
                           <Building2 className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
@@ -378,11 +391,19 @@ export const AuthPage: React.FC = () => {
                             value={address.wereda}
                             onChange={(e) => setAddress({...address, wereda: e.target.value})}
                           />
+                          <input
+                            type="text"
+                            placeholder="Kebele / ቀበሌ"
+                            required
+                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                            value={address.kebele}
+                            onChange={(e) => setAddress({...address, kebele: e.target.value})}
+                          />
                         </div>
                       </>
                     )}
 
-                    {(role === 'city_police' || role === 'zone_police' || role === 'wereda_police') && (
+                    {(role === 'city_police' || role === 'zone_police' || role === 'wereda_police') && !isPreRegistered && (
                       <div className="space-y-3">
                         <p className="text-xs font-bold text-slate-500 uppercase">Jurisdiction / የስራ ክልል</p>
                         <div className="grid grid-cols-1 gap-2">
@@ -500,5 +521,3 @@ export const AuthPage: React.FC = () => {
     </div>
   );
 };
-
-import { cn } from '../lib/utils';
