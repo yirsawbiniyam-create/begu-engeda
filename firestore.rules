@@ -98,7 +98,7 @@ service cloud.firestore {
 
     function isValidUser(data) {
       let requiredFields = ['fullName', 'email', 'role'];
-      let allowedFields = ['fullName', 'email', 'role', 'phoneNumber', 'hotelName', 'hotelAddress', 'policeJurisdiction', 'createdAt', 'updatedAt'];
+      let allowedFields = ['uid', 'fullName', 'email', 'role', 'phoneNumber', 'hotelName', 'hotelAddress', 'policeJurisdiction', 'createdAt', 'updatedAt'];
       return data.keys().hasAll(requiredFields) && 
              data.keys().hasOnly(allowedFields) &&
              data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 100 &&
