@@ -390,7 +390,7 @@ export const Dashboard: React.FC = () => {
           )}>
             <h3 className="text-lg font-bold text-slate-800 mb-6">Report Trends (Last 7 Days) / የሪፖርት ሁኔታ (ያለፉት 7 ቀናት)</h3>
             <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
@@ -408,7 +408,7 @@ export const Dashboard: React.FC = () => {
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
               <h3 className="text-lg font-bold text-slate-800 mb-6">Status Distribution / የሁኔታዎች ስርጭት</h3>
               <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <PieChart>
                     <Pie
                       data={statusData}
