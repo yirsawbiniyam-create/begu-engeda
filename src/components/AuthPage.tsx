@@ -9,7 +9,8 @@ import {
   Phone,
   Building2,
   ChevronRight,
-  Globe
+  Globe,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,7 +19,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 
@@ -44,6 +45,31 @@ export const AuthPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [locationType, setLocationType] = useState<'zone' | 'city'>('zone');
+  const [isPreRegistered, setIsPreRegistered] = useState(false);
+
+  // Check for pre-registration
+  React.useEffect(() => {
+    const checkPreRegistration = async () => {
+      if (email && mode === 'register') {
+        const q = query(collection(db, 'pre_registered_users'), where('email', '==', email.toLowerCase()));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setFullName(data.fullName);
+          setPhone(data.phoneNumber);
+          setRole(data.role);
+          if (data.jurisdiction) {
+            setJurisdiction(data.jurisdiction);
+          }
+          setIsPreRegistered(true);
+        } else {
+          setIsPreRegistered(false);
+        }
+      }
+    };
+    const timer = setTimeout(checkPreRegistration, 500);
+    return () => clearTimeout(timer);
+  }, [email, mode]);
 
   // Receptionist specific
   const [hotelName, setHotelName] = useState('');
@@ -136,6 +162,15 @@ export const AuthPage: React.FC = () => {
             createdAt: new Date().toISOString(),
             ...(finalRole === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
           });
+
+          // Clean up pre-registration if it existed
+          if (isPreRegistered) {
+            const q = query(collection(db, 'pre_registered_users'), where('email', '==', email.toLowerCase()));
+            const snapshot = await getDocs(q);
+            snapshot.forEach(async (d) => {
+              await deleteDoc(d.ref);
+            });
+          }
         }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -236,17 +271,10 @@ export const AuthPage: React.FC = () => {
                   </span>
                 </div>
 
-                {user && !profile && (
-                  <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl mb-6 shadow-sm">
-                    <div className="flex items-center mb-2">
-                      <Shield className="w-5 h-5 text-amber-600 mr-2" />
-                      <p className="text-sm text-amber-800 font-bold">
-                        Complete Your Profile / ምዝገባውን ያጠናቅቁ
-                      </p>
-                    </div>
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                      Your account exists, but we need a few more details to set up your dashboard. / መለያዎ ተፈጥሯል፣ ነገር ግን ዳሽቦርድዎን ለማዘጋጀት ጥቂት ተጨማሪ ዝርዝሮች ያስፈልጉናል።
-                    </p>
+                {isPreRegistered && (
+                  <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-lg flex items-center">
+                    <Check className="w-4 h-4 mr-2" />
+                    Account details found! Role and Jurisdiction set by Admin. / ዝርዝር መረጃ ተገኝቷል! ሚና እና የስራ ክልል በአድሚን ተዘጋጅቷል።
                   </div>
                 )}
 
@@ -264,7 +292,8 @@ export const AuthPage: React.FC = () => {
                         type="text"
                         placeholder="Full Name / ሙሉ ስም"
                         required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                        disabled={isPreRegistered}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                       />
@@ -275,7 +304,8 @@ export const AuthPage: React.FC = () => {
                         type="tel"
                         placeholder="Phone Number / ስልክ ቁጥር"
                         required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                        disabled={isPreRegistered}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                       />
