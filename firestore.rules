@@ -65,12 +65,7 @@ service cloud.firestore {
 
     function isRegionalPolice() {
       return isAuthenticated() && (
-        request.auth.token.email in [
-          'policeregion551@gmail.com', 
-          'yirsawbiniyam@gmail.com', 
-          'sendeqbuild@gmail.com',
-          'binimandelabb@gmail.com'
-        ] ||
+        request.auth.token.email == 'policeregion551@gmail.com' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          getUserData().get('role', '') == 'regional_police')
       );
