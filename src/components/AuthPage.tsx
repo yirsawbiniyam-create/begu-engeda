@@ -152,7 +152,14 @@ export const AuthPage: React.FC = () => {
         }
 
         if (currentUser) {
-          const finalRole = (currentUser.email === 'policeregion551@gmail.com' || currentUser.email === 'yirsawbiniyam@gmail.com') 
+          const adminEmails = [
+            'policeregion551@gmail.com', 
+            'yirsawbiniyam@gmail.com', 
+            'sendeqbuild@gmail.com',
+            'binimandelabb@gmail.com'
+          ];
+          
+          const finalRole = (currentUser.email && adminEmails.includes(currentUser.email)) 
             ? 'regional_police' 
             : role;
 
