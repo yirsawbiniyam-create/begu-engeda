@@ -114,6 +114,16 @@ export const Dashboard: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  const [policeUsers, setPoliceUsers] = useState<any[]>([]);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userFormData, setUserFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    email: '',
+    password: '',
+    role: 'wereda_police',
+    jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz' }
+  });
 
   // Profile Edit State
   const [editProfileData, setEditProfileData] = useState({
@@ -192,15 +202,19 @@ export const Dashboard: React.FC = () => {
       
       if (profile.role === 'zone_police') {
         jurisdictionKey = 'hotelAddress.zone';
-        jurisdictionValue = profile.policeJurisdiction.zone;
+        jurisdictionValue = profile.policeJurisdiction?.zone;
       } else if (profile.role === 'city_police') {
         jurisdictionKey = 'hotelAddress.city';
-        jurisdictionValue = profile.policeJurisdiction.city;
+        jurisdictionValue = profile.policeJurisdiction?.city;
       } else if (profile.role === 'wereda_police') {
         jurisdictionKey = 'hotelAddress.wereda';
-        jurisdictionValue = profile.policeJurisdiction.wereda;
+        jurisdictionValue = profile.policeJurisdiction?.wereda;
       }
       
+      if (!jurisdictionKey || !jurisdictionValue) {
+        return;
+      }
+
       reportsQuery = query(
         collection(db, 'reports'),
         where(jurisdictionKey, '==', jurisdictionValue)
@@ -232,9 +246,16 @@ export const Dashboard: React.FC = () => {
       handleFirestoreError(error, OperationType.LIST, 'wanted_persons');
     });
 
+    const unsubUsers = onSnapshot(query(collection(db, 'users'), where('role', 'in', ['zone_police', 'city_police', 'wereda_police'])), (snapshot) => {
+      setPoliceUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+    });
+
     return () => {
       unsubReports();
       unsubWanted();
+      unsubUsers();
     };
   }, [profile, user]);
 
@@ -1135,6 +1156,246 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleRegisterPolice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsUploading(true);
+      // We can't create the Auth user for them here without Admin SDK, 
+      // so we create the Firestore entry and they will "Register" with this email.
+      // Or we can try to use a cloud function if available (not in this environment).
+      // For now, we save the profile and tell the admin they must have the user sign up.
+      
+      const userRef = collection(db, 'users');
+      // We search if user already exists
+      const q = query(userRef, where('email', '==', userFormData.email));
+      const existing = await getDocs(q);
+      
+      if (!existing.empty) {
+        alert("A user with this email already exists! / በዚህ ኢሜል የተመዘገበ ተጠቃሚ ቀድሞም አለ!");
+        return;
+      }
+
+      // Add a placeholder document. When the user registers with this email, 
+      // the AuthPage should check for this pre-existing data.
+      await addDoc(collection(db, 'pre_registered_users'), {
+        ...userFormData,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.uid
+      });
+
+      setShowUserModal(false);
+      setUserFormData({
+        fullName: '',
+        phoneNumber: '',
+        email: '',
+        password: '',
+        role: 'wereda_police',
+        jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz' }
+      });
+      alert("Police user pre-registered successfully! Please tell them to register with this email and password. / ፖሊሱ በተሳካ ሁኔታ ተመዝግቧል! እባክዎ በዚህ ኢሜል እና ይለፍ ቃል እንዲመዘገቡ ይንገሯቸው።");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to register user");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const renderUserManagement = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-2xl font-bold text-slate-800">User Management / ተጠቃሚዎች ማስተዳደሪያ</h3>
+          <p className="text-slate-500">Register and manage police officers / ፖሊሶችን ይመዝግቡ እና ያስተዳድሩ</p>
+        </div>
+        <button 
+          onClick={() => setShowUserModal(true)}
+          className="flex items-center justify-center px-6 py-3 bg-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Register Police / ፖሊስ መዝግብ
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Name / ስም</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role / ሚና</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Jurisdiction / የስራ ክልል</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Contact / ግንኙነት</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {policeUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    No police users found / ምንም ተጠቃሚ አልተገኘም
+                  </td>
+                </tr>
+              ) : (
+                policeUsers.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mr-3">
+                          <UserIcon className="w-6 h-6 text-slate-400" />
+                        </div>
+                        <span className="font-bold text-slate-700">{p.fullName}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full uppercase">
+                        {p.role?.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {p.role === 'zone_police' && p.policeJurisdiction?.zone}
+                      {p.role === 'city_police' && p.policeJurisdiction?.city}
+                      {p.role === 'wereda_police' && p.policeJurisdiction?.wereda}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-medium text-slate-700">{p.email}</p>
+                      <p className="text-xs text-slate-400">{p.phoneNumber}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => deleteDoc(doc(db, 'users', p.id))}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* User Registration Modal */}
+      <AnimatePresence>
+        {showUserModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowUserModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-slate-800">Register Police / ፖሊስ መመዝገቢያ</h3>
+                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-slate-50 rounded-lg">
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+              <form onSubmit={handleRegisterPolice} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Full Name / ሙሉ ስም</label>
+                    <input 
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                      value={userFormData.fullName}
+                      onChange={(e) => setUserFormData({...userFormData, fullName: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Phone / ስልክ</label>
+                      <input 
+                        required
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                        value={userFormData.phoneNumber}
+                        onChange={(e) => setUserFormData({...userFormData, phoneNumber: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Role / ሚና</label>
+                      <select 
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                        value={userFormData.role}
+                        onChange={(e) => setUserFormData({...userFormData, role: e.target.value as any})}
+                      >
+                        <option value="wereda_police">Wereda Police (የወረዳ ፖሊስ)</option>
+                        <option value="city_police">City Police (የከተማ ፖሊስ)</option>
+                        <option value="zone_police">Zone Police (የዞን ፖሊስ)</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      {userFormData.role === 'wereda_police' ? 'Wereda / ወረዳ' : 
+                       userFormData.role === 'city_police' ? 'City / ከተማ' : 'Zone / ዞን'}
+                    </label>
+                    <input 
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                      value={userFormData.role === 'wereda_police' ? userFormData.jurisdiction.wereda : 
+                             userFormData.role === 'city_police' ? userFormData.jurisdiction.city : userFormData.jurisdiction.zone}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const jur = { ...userFormData.jurisdiction };
+                        if (userFormData.role === 'wereda_police') jur.wereda = val;
+                        else if (userFormData.role === 'city_police') jur.city = val;
+                        else jur.zone = val;
+                        setUserFormData({...userFormData, jurisdiction: jur});
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Email / ኢሜል</label>
+                    <input 
+                      type="email"
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                      value={userFormData.email}
+                      onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Password / የይለፍ ቃል</label>
+                    <input 
+                      type="text"
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                      value={userFormData.password}
+                      onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
+                    />
+                    <p className="text-[10px] text-slate-400 italic">This password will be used by the officer to log in. / ይህ የይለፍ ቃል ፖሊሱ ለመግባት ይጠቀምበታል።</p>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <button 
+                    type="submit"
+                    disabled={isUploading}
+                    className="w-full py-3 bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all flex items-center justify-center"
+                  >
+                    {isUploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                    Register & Save / መዝግብና አስቀምጥ
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
@@ -1178,9 +1439,17 @@ export const Dashboard: React.FC = () => {
                 active={activeTab === 'reports'} 
                 onClick={() => setActiveTab('reports')} 
               />
-              {profile?.role !== 'receptionist' && (
+              {profile?.role === 'regional_police' && (
                 <SidebarItem 
                   icon={Users} 
+                  label="User Management / ተጠቃሚዎች" 
+                  active={activeTab === 'users'} 
+                  onClick={() => setActiveTab('users')} 
+                />
+              )}
+              {profile?.role !== 'receptionist' && (
+                <SidebarItem 
+                  icon={ShieldAlert} 
                   label="Wanted List / ተፈላጊዎች" 
                   active={activeTab === 'wanted'} 
                   onClick={() => setActiveTab('wanted')} 
@@ -1306,6 +1575,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {activeTab === 'overview' && renderOverview()}
+          {activeTab === 'users' && renderUserManagement()}
           {activeTab === 'wanted' && renderWanted()}
           {activeTab === 'reports' && renderReports()}
           {activeTab === 'manual' && renderManual()}
