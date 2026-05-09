@@ -44,10 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       // Special handling for Regional Police who don't register
       const adminEmails = [
-        'policeregion551@gmail.com', 
-        'yirsawbiniyam@gmail.com', 
-        'sendeqbuild@gmail.com',
-        'binimandelabb@gmail.com'
+        'policeregion551@gmail.com'
       ];
       
       if (user.email && adminEmails.includes(user.email)) {
@@ -64,11 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const path = `users/${user.uid}`;
       const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-        setProfile(doc.data() || null);
+        const data = doc.data();
+        if (data) {
+          setProfile(data);
+        } else {
+          setProfile(null);
+        }
         setLoading(false);
         setIsAuthReady(true);
       }, (error) => {
         handleFirestoreError(error, OperationType.GET, path);
+        setProfile(null);
         setLoading(false);
         setIsAuthReady(true);
       });
