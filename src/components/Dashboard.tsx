@@ -130,7 +130,7 @@ export const Dashboard: React.FC = () => {
     fullName: '',
     phoneNumber: '',
     hotelName: '',
-    hotelAddress: { city: '', zone: '', wereda: '', region: 'Benishangul-Gumuz' },
+    hotelAddress: { city: '', zone: '', wereda: '', region: 'Benishangul-Gumuz', kebele: '' },
     policeJurisdiction: { city: '', zone: '', region: 'Benishangul-Gumuz' }
   });
 
@@ -140,7 +140,7 @@ export const Dashboard: React.FC = () => {
         fullName: profile.fullName || '',
         phoneNumber: profile.phoneNumber || '',
         hotelName: profile.hotelName || '',
-        hotelAddress: profile.hotelAddress || { city: '', zone: '', wereda: '', region: 'Benishangul-Gumuz' },
+        hotelAddress: profile.hotelAddress || { city: '', zone: '', wereda: '', region: 'Benishangul-Gumuz', kebele: '' },
         policeJurisdiction: profile.policeJurisdiction || { city: '', zone: '', region: 'Benishangul-Gumuz' }
       });
     }
@@ -486,7 +486,7 @@ export const Dashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-slate-700">{report.hotelName}</p>
                       <p className="text-xs text-slate-400">
-                        {report.hotelAddress?.city || report.hotelAddress?.zone}, {report.hotelAddress?.wereda}
+                        {report.hotelAddress?.city || report.hotelAddress?.zone}, {report.hotelAddress?.wereda}{report.hotelAddress?.kebele ? `, ${report.hotelAddress.kebele}` : ''}
                       </p>
                     </td>
                     <td className="px-6 py-4">
@@ -898,6 +898,18 @@ export const Dashboard: React.FC = () => {
                         />
                       </div>
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Kebele / ቀበሌ</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500"
+                        value={editProfileData.hotelAddress.kebele}
+                        onChange={(e) => setEditProfileData({
+                          ...editProfileData, 
+                          hotelAddress: { ...editProfileData.hotelAddress, kebele: e.target.value }
+                        })}
+                      />
+                    </div>
                   </div>
                 </>
               )}
@@ -955,7 +967,8 @@ export const Dashboard: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Address / አድራሻ</label>
                   <p className="font-medium text-slate-800">
                     {profile?.hotelAddress?.city ? `City: ${profile.hotelAddress.city} / ከተማ: ${profile.hotelAddress.city}` : `Zone: ${profile.hotelAddress.zone} / ዞን: ${profile.hotelAddress.zone}`}, 
-                    Wereda: {profile.hotelAddress.wereda} / ወረዳ: {profile.hotelAddress.wereda}
+                    Wereda: {profile.hotelAddress.wereda} / ወረዳ: {profile.hotelAddress.wereda},
+                    Kebele: {profile.hotelAddress.kebele || 'N/A'} / ቀበሌ: {profile.hotelAddress.kebele || 'የለም'}
                   </p>
                 </div>
               </>
@@ -1160,25 +1173,28 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     try {
       setIsUploading(true);
-      // We can't create the Auth user for them here without Admin SDK, 
-      // so we create the Firestore entry and they will "Register" with this email.
-      // Or we can try to use a cloud function if available (not in this environment).
-      // For now, we save the profile and tell the admin they must have the user sign up.
       
-      const userRef = collection(db, 'users');
-      // We search if user already exists
-      const q = query(userRef, where('email', '==', userFormData.email));
+      const preUserRef = collection(db, 'pre_registered_users');
+      const q = query(preUserRef, where('email', '==', userFormData.email.toLowerCase()));
       const existing = await getDocs(q);
       
       if (!existing.empty) {
-        alert("A user with this email already exists! / በዚህ ኢሜል የተመዘገበ ተጠቃሚ ቀድሞም አለ!");
+        alert("A user with this email is already pre-registered! / በዚህ ኢሜል የተመዘገበ ተጠቃሚ ቀድሞም አለ!");
         return;
       }
 
-      // Add a placeholder document. When the user registers with this email, 
-      // the AuthPage should check for this pre-existing data.
+      // Ensure jurisdiction is set correctly based on role
+      const cleanJurisdiction = {
+        region: 'Benishangul-Gumuz',
+        zone: userFormData.role === 'zone_police' ? userFormData.jurisdiction.zone : '',
+        city: userFormData.role === 'city_police' ? userFormData.jurisdiction.city : '',
+        wereda: userFormData.role === 'wereda_police' ? userFormData.jurisdiction.wereda : ''
+      };
+
       await addDoc(collection(db, 'pre_registered_users'), {
         ...userFormData,
+        email: userFormData.email.toLowerCase(),
+        jurisdiction: cleanJurisdiction,
         createdAt: new Date().toISOString(),
         createdBy: user?.uid
       });
@@ -1192,7 +1208,7 @@ export const Dashboard: React.FC = () => {
         role: 'wereda_police',
         jurisdiction: { zone: '', city: '', wereda: '', region: 'Benishangul-Gumuz' }
       });
-      alert("Police user pre-registered successfully! Please tell them to register with this email and password. / ፖሊሱ በተሳካ ሁኔታ ተመዝግቧል! እባክዎ በዚህ ኢሜል እና ይለፍ ቃል እንዲመዘገቡ ይንገሯቸው።");
+      alert("Police user pre-registered! Tell them to go to 'Register', enter their email, and the system will handle the rest. / ፖሊሱ ተመዝግቧል! ወደ 'Register' በመሄድ ኢሜላቸውን እንዲሞሉ ይንገሯቸው።");
     } catch (err) {
       console.error(err);
       alert("Failed to register user");
