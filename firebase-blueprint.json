@@ -64,6 +64,10 @@
     "/wanted_persons/{personId}": {
       "schema": "WantedPerson",
       "description": "Wanted persons database"
+    },
+    "/pre_registered_users/{docId}": {
+      "schema": "User",
+      "description": "Pending user registrations created by admin"
     }
   }
 }
