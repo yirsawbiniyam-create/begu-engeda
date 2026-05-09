@@ -27,7 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      if (!user) {
+      if (user) {
+        setLoading(true);
+      } else {
         setProfile(null);
         setLoading(false);
         setIsAuthReady(true);
@@ -39,8 +41,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (user) {
+      setLoading(true);
       // Special handling for Regional Police who don't register
-      if (user.email === 'policeregion551@gmail.com') {
+      const adminEmails = [
+        'policeregion551@gmail.com', 
+        'yirsawbiniyam@gmail.com', 
+        'sendeqbuild@gmail.com',
+        'binimandelabb@gmail.com'
+      ];
+      
+      if (user.email && adminEmails.includes(user.email)) {
         setProfile({
           fullName: 'Regional Police Admin / የክልል ፖሊስ ተቆጣጣሪ',
           role: 'regional_police',
