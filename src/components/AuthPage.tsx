@@ -99,21 +99,18 @@ export const AuthPage: React.FC = () => {
       const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
       if (!userDoc.exists()) {
-        const finalRole = (result.user.email === 'policeregion551@gmail.com' || result.user.email === 'yirsawbiniyam@gmail.com') 
-          ? 'regional_police' 
-          : role;
+        const isAdminEmail = result.user.email === 'policeregion551@gmail.com';
+        const finalRole = isAdminEmail ? 'regional_police' : (role && role !== 'regional_police' ? role : 'wereda_police');
 
-        if (finalRole) {
-          // New user from social login
-          await setDoc(doc(db, 'users', result.user.uid), {
-            uid: result.user.uid,
-            email: result.user.email,
-            fullName: result.user.displayName || fullName,
-            role: finalRole,
-            createdAt: new Date().toISOString(),
-            ...(finalRole === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
-          });
-        }
+        // New user from social login
+        await setDoc(doc(db, 'users', result.user.uid), {
+          uid: result.user.uid,
+          email: result.user.email,
+          fullName: result.user.displayName || fullName || 'User',
+          role: finalRole,
+          createdAt: new Date().toISOString(),
+          ...(finalRole === 'receptionist' ? { hotelName, hotelAddress: address } : { policeJurisdiction: jurisdiction })
+        });
       }
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
@@ -152,21 +149,13 @@ export const AuthPage: React.FC = () => {
         }
 
         if (currentUser) {
-          const adminEmails = [
-            'policeregion551@gmail.com', 
-            'yirsawbiniyam@gmail.com', 
-            'sendeqbuild@gmail.com',
-            'binimandelabb@gmail.com'
-          ];
-          
-          const finalRole = (currentUser.email && adminEmails.includes(currentUser.email)) 
-            ? 'regional_police' 
-            : role;
+          const isAdminEmail = currentUser.email === 'policeregion551@gmail.com';
+          const finalRole = isAdminEmail ? 'regional_police' : (role && role !== 'regional_police' ? role : 'wereda_police');
 
           await setDoc(doc(db, 'users', currentUser.uid), {
             uid: currentUser.uid,
             email: currentUser.email,
-            fullName,
+            fullName: fullName || currentUser.displayName || 'User',
             phoneNumber: phone,
             role: finalRole,
             createdAt: new Date().toISOString(),
